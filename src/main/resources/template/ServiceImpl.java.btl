@@ -1,0 +1,18 @@
+package ${package}.service;
+
+import com.sheep.cloud.web.service.simple.AbstractCrudService;
+import ${package}.entity.${className};
+import ${package}.vo.${className}VO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+/**
+ * @author ${author}
+ * @create ${datetime}
+ **/
+@Slf4j
+@Service
+public class ${className}ServiceImpl extends AbstractCrudService<${className}, ${className}VO> implements ${className}Service {
+	
+}
+

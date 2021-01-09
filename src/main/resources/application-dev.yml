@@ -1,0 +1,40 @@
+spring:
+  flyway:
+    enabled: false
+  servlet:
+    multipart:
+      location: /data/crawler/upload
+      max-file-size: 4096MB
+      max-request-size: 4096MB
+  datasource:
+      name: datasource
+      type: com.zaxxer.hikari.HikariDataSource
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://127.0.0.1:3306/cloud_academic?useUnicode=true&serverTimezone=UTC&useSSL=false&rewriteBatchedStatements=true
+#      url: jdbc:mysql://172.21.2.236:3306/cloud_academic?useUnicode=true&serverTimezone=UTC&useSSL=false&rewriteBatchedStatements=true
+      #url: jdbc:mysql://192.168.0.90:3306/cloud_academic?useUnicode=true&serverTimezone=UTC&useSSL=false
+      username: root
+      #password: root
+      password: zhong123
+  redis:
+      url: redis://user:123456@172.21.2.236:6379
+#      url: redis://user:wdq123456@172.21.2.236:6379
+      #url: redis://192.168.0.87:6379
+      database: 2
+  data:
+      mongodb:
+        uri: mongodb://127.0.0.1:27017/cloud_academic
+#        uri: mongodb://172.21.2.236:27017/cloud_academic
+        #uri: mongodb://cloud_education:123456@192.168.0.91:27017/cloud_education
+  elasticsearch:
+    jest:
+      #uris: http://192.168.0.90:9200,http://192.168.0.91:9200,http://192.168.0.92:9200
+      uris: http://172.21.16.23:9200,http://172.21.16.24:9200,http://172.21.16.25:9200
+
+      read-timeout: 120s
+      connection-timeout: 120s
+
+cloud:
+  crawler:
+    #fileStoragePath: /data/crawler/upload
+    fileStoragePath: D://upload

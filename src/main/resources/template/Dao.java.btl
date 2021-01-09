@@ -1,0 +1,15 @@
+package ${package}.dao;
+
+import ${package}.entity.${className};
+import org.springframework.stereotype.Repository;
+import com.sheep.cloud.web.dao.mongodb.AbstractMongodbCrudDao;
+import com.sheep.cloud.web.dao.beetl.AbstractBeetlCrudDao;
+
+/**
+ * @author ${author}
+ * @create ${datetime}
+ **/
+@Repository
+public class ${className}Dao extends ${type}<${className}> {
+
+}

@@ -1,0 +1,17 @@
+package ${package}.vo;
+
+import ${package}.entity.${className};
+import com.sheep.cloud.core.vo.BaseVO;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+
+/**
+ * @author ${author}
+ * @create ${datetime}
+ */
+@Data
+public class ${className}VO extends BaseVO<${className}> {
+
+
+
+}

@@ -1,0 +1,19 @@
+package ${package}.controller;
+
+import ${package}.entity.${className};
+import ${package}.vo.${className}VO;
+import com.sheep.cloud.web.controller.BaseCrudController;
+import io.swagger.annotations.Api;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @author ${author}
+ * @create ${datetime}
+ **/
+@RestController
+@RequestMapping("${pathName}")
+@Api(tags = {"${pathName}"}, description = "${pathName}控制器")
+public class ${className}Controller extends BaseCrudController<${className}, ${className}VO>{
+	
+}
