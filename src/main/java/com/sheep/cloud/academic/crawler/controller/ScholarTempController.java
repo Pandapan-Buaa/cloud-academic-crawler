@@ -66,55 +66,56 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(12, 12, 0, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(), threadFactory);
 
     public String parseRequest(String[] args) {
-        if (args[0].equals("load-config")) {
-            return loadConfig();
-        } else if (args[0].equals("crawler") || args[0].equals("imgCrawler") || args[0].equals("detail") || args[0].equals("detail-match")) {
-            String organizationName = args[1];
-            String collegeName = args[2];
-            QueryParam param = new QueryParam();
-            if (!organizationName.equals("all")) {
-                param.addTerm(Term.build("organizationName", organizationName));
-            }
-            if (!collegeName.equals("all")) {
-                param.addTerm(Term.build("collegeName", collegeName));
-            }
-            switch (args[0]) {
-                case "crawler":
-                    return crawler(param);
-                case "imgCrawler":
-                    return imgCrawler(param);
-                case "detail":
-                    if (!"null".equals(args[3])) {
-                        if (args[3].equals("true")) {
-                            return detail(param, true);
-                        } else {
-                            if (organizationName.equals("all") && collegeName.equals("all")) {
-                                param.addTerm(Term.build("mainPage", false));
-                            }
-                            return detail(param, false);
-                        }
-                    } else {
-                        return detail(param, false);
-                    }
-                case "detail-match":
-                    if (!"null".equals(args[3])) {
-                        if (args[3].equals("true")) {
-                            return detail(param, true);
-                        } else {
-                            if (organizationName.equals("all") && collegeName.equals("all")) {
-                                param.addTerm(Term.build("match", false));
-                            }
-                            return detailMatch(param, false);
-                        }
-                    } else {
-                        return detailMatch(param, false);
-                    }
-                default:
-                    return "Invalid Request!";
-            }
-        } else {
-            return "Invalid Request!";
-        }
+//        if (args[0].equals("load-config")) {
+//            return loadConfig();
+//        } else if (args[0].equals("crawler") || args[0].equals("imgCrawler") || args[0].equals("detail") || args[0].equals("detail-match")) {
+//            String organizationName = args[1];
+//            String collegeName = args[2];
+//            QueryParam param = new QueryParam();
+//            if (!organizationName.equals("all")) {
+//                param.addTerm(Term.build("organizationName", organizationName));
+//            }
+//            if (!collegeName.equals("all")) {
+//                param.addTerm(Term.build("collegeName", collegeName));
+//            }
+//            switch (args[0]) {
+//                case "crawler":
+//                    return crawler(param);
+//                case "imgCrawler":
+//                    return imgCrawler(param);
+//                case "detail":
+//                    if (!"null".equals(args[3])) {
+//                        if (args[3].equals("true")) {
+//                            return detail(param, true);
+//                        } else {
+//                            if (organizationName.equals("all") && collegeName.equals("all")) {
+//                                param.addTerm(Term.build("mainPage", false));
+//                            }
+//                            return detail(param, false);
+//                        }
+//                    } else {
+//                        return detail(param, false);
+//                    }
+//                case "detail-match":
+//                    if (!"null".equals(args[3])) {
+//                        if (args[3].equals("true")) {
+//                            return detail(param, true);
+//                        } else {
+//                            if (organizationName.equals("all") && collegeName.equals("all")) {
+//                                param.addTerm(Term.build("match", false));
+//                            }
+//                            return detailMatch(param, false);
+//                        }
+//                    } else {
+//                        return detailMatch(param, false);
+//                    }
+//                default:
+//                    return "Invalid Request!";
+//            }
+//        } else {
+//            return "Invalid Request!";
+//        }
+        return null;
     }
 
     int loadConfigStatus = 0;
@@ -218,10 +219,23 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
     @ApiOperation(value = "根据指定高校院系规则 抓取学者")
     @GetMapping("/crawler")
-    public String crawler(QueryParam param) {
+    public String crawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+                          @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+                          @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
         long now = System.currentTimeMillis();
         crawlerStatus = 0;
         crawlerSize = 0;
+        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        if(!refresh){
+            param.addTerm(Term.build("handled", false));
+        }
         // 读取已经爬取的数据，防止再次抓取重复
         /*log.info("=============== Start reading finished scholars from scholar_temp! ===============");
         List<ScholarTemp> temps = MongodbUtil.select(param, ScholarTemp.class);
@@ -241,6 +255,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         ScholarConfigure configure1 = new ScholarConfigure("西安科技大学", "理学院", "", "教授", "https://skxy.qhnu.edu.cn/xygk/szdw.htm", "//*[@id=\"vsb_content_1117_u91\"]");
         configures.add(configure1);*/
         if (CollectionUtil.isEmpty(configures)) {
+            crawlerStatus = 100;
             return DateUtil.millisecondToTime(now);
         }
         int count = 0;
@@ -262,6 +277,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
 
         log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+        crawlerStatus = 100;
         return DateUtil.millisecondToTime(now);
     }
 
@@ -285,9 +301,22 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     }
     @ApiOperation(value = "抓取链接在图片上的学者")
     @GetMapping("/imgCrawler")
-    public String imgCrawler(QueryParam param) {
+    public String imgCrawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+                             @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+                             @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
         imgCrawlerSize = 0;
         imgCrawlerStatus = 0;
+        log.info("/imgCrawler " + refresh + " "  + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        if(!refresh){
+            param.addTerm(Term.build("handled", false));
+        }
 
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarConfigureTemp> configureTemps = MongodbUtil.select(param, ScholarConfigureTemp.class);
@@ -314,6 +343,9 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
             Spider.create(new ScholarImgSpider(configure, charset)).addUrl(configure.getWebsite()).thread(1).run();
+            Update update = new Update();
+            update.set("handled", true);
+            MongodbUtil.patch(configure.getId(), update, ScholarConfigureTemp.class);
             if (count % 10 == 0) {
                 log.info("=============== Total count: " + configures.size() + ". ===============");
                 log.info("=============== Finished num: " + count + ". ===============");
@@ -321,6 +353,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
 
         log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+        imgCrawlerStatus =  100;
         return "success";
     }
 
@@ -356,7 +389,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
     int detailStatus = 0;
     int detailSize = 0;
-    @ApiOperation(value = "抓取学者状态")
+    @ApiOperation(value = "抓取学者详情状态")
     @GetMapping("/detail_status")
     public String detailStatus() {
         Map<String, Integer> map = new HashMap<>();
@@ -371,18 +404,42 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         return resultString;
     }
+
+
     @ApiOperation(value = "抓取学者详情页面")
     @GetMapping(path = {"/detail"})
-    public String detail(QueryParam param, boolean refresh) {
+    public String detail(
+            @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
         long now = System.currentTimeMillis();
-        param.addTerm(Term.build("content", TermTypeEnum.NULL, null));
+        detailStatus = 0;
+        detailSize = 0;
+        log.info("/detail " + refresh + " " + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        if(refresh == false){
+            param.addTerm(Term.build("mainPage", false));
+        }
         //param.addTerm(Term.build("organizationName", "中国农业科学院农产品加工研究所"));
         //param.addTerm(Term.build("name", "胡萍"));
         log.info("=============== Start loading scholars from Database! ===============");
+        if(!refresh){
+            param.addTerm(Term.build("content", TermTypeEnum.NULL, null));
+        }
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
+        detailSize = scholars.size();
+        int count = 0;
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
+                count++;
+                detailStatus = (int)(count/(double)detailSize*100);
                 Update update = new Update();
                 update.set("match", false);
                 MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
@@ -394,6 +451,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
         } else {
             for (ScholarTemp scholar : scholars) {
+                count++;
+                detailStatus = (int)(count/(double)detailSize*100);
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
@@ -401,13 +460,49 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
         }
+        detailStatus  = 100;
         return DateUtil.millisecondToTime(now);
     }
 
+    int detailMatchStatus = 0;
+    int detailMatchSize = 0;
+    @ApiOperation(value = "抓取学者详情状态")
+    @GetMapping("/detail_match_status")
+    public String detailMatchStatus() {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("progress", detailMatchStatus);
+        map.put("size", detailMatchSize);
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        try {
+            resultString = mapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+    }
+
+
     @ApiOperation(value = "根据学者详情页面正则匹配职称、邮箱、电话等信息")
     @GetMapping(path = {"/detail_match"})
-    public String detailMatch(QueryParam param, boolean refresh) {
+    public String detailMatch(
+            @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
         long now = System.currentTimeMillis();
+        detailMatchStatus = 0;
+        detailMatchSize = 0;
+        log.info("/detail_match " + refresh + " " + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        if(refresh == false){
+            param.addTerm(Term.build("match", false));
+        }
         /*
         param.addSort("organizationName", SortEnum.DESC);
         log.info("=============== Start matching detail! ===============");
@@ -418,10 +513,14 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
-
+        detailMatchSize  = scholars.size();
+        int count = 0;
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
+                count++;
+                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 Update update = new Update();
+//                update.set("mainPage", false);
                 update.set("match", false);
                 MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
@@ -431,12 +530,15 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
         } else {
             for (ScholarTemp scholar : scholars) {
+                count++;
+                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         }
+        detailMatchStatus = 100;
         return UPDATE_INFO.toString();
     }
 

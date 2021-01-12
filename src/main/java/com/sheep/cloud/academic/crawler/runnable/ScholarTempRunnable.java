@@ -49,7 +49,7 @@ public class ScholarTempRunnable implements Runnable {
 
             Update update = new Update();
             boolean flag = false;
-
+//            log.info(title + " " + email + " " + phone );
             if ((StringUtil.isEmpty(scholar.getTitle()) || "null".equals(scholar.getTitle())) && StringUtil.isNotEmpty(title)) {
                 flag = true;
                 update.set("title", title);
