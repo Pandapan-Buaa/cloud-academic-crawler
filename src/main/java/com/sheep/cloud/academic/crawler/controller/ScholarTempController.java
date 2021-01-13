@@ -23,6 +23,7 @@ import com.sheep.cloud.core.enums.Term;
 import com.sheep.cloud.core.enums.TermTypeEnum;
 import com.sheep.cloud.core.util.*;
 import com.sheep.cloud.open.mongodb.util.MongodbUtil;
+import com.sheep.cloud.academic.crawler.util.SensitiveFilter;
 import com.sheep.cloud.open.redis.util.RedisUtil;
 import com.sheep.cloud.web.controller.BaseCrudController;
 import com.sheep.cloud.web.controller.util.QueryParamUtil;
@@ -44,6 +45,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
 
 /**
  * @author YangChao
@@ -436,6 +438,9 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
         detailSize = scholars.size();
         int count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
@@ -446,6 +451,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
+                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarSpiderRunnable(scholar));
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
@@ -456,12 +462,19 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
+                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarSpiderRunnable(scholar));
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
         }
         detailStatus  = 100;
-        return DateUtil.millisecondToTime(now);
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+//        return DateUtil.millisecondToTime(now);
     }
 
     int detailMatchStatus = 0;
@@ -515,6 +528,9 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
         detailMatchSize  = scholars.size();
         int count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
@@ -526,6 +542,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
+                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         } else {
@@ -535,12 +552,102 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
+                result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         }
         detailMatchStatus = 100;
-        return UPDATE_INFO.toString();
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+//        return UPDATE_INFO.toString();
     }
+
+    @Autowired
+    private SensitiveFilter sensitiveFilter;
+    int antiCrawlerStatus = 0;
+    int antiCrawlerSize = 0;
+    @ApiOperation(value = "反爬虫详情状态")
+    @GetMapping("/anti_crawler_status")
+    public String antiCrawlerStatus() {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("progress", antiCrawlerStatus);
+        map.put("size", antiCrawlerSize);
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        try {
+            resultString = mapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+    }
+
+    @ApiOperation(value = "反爬虫详情")
+    @GetMapping(path = {"/anti_crawler"})
+    public String antiCrawler(
+            @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName) {
+        long now = System.currentTimeMillis();
+        antiCrawlerStatus = 0;
+        antiCrawlerSize = 0;
+        log.info("/anti_crawler " + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        log.info("=============== Start loading scholars from Database! ===============");
+        List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
+        log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
+        antiCrawlerSize = scholars.size();
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        int count = 0;
+        for (ScholarTemp scholar : scholars) {
+            if(StringUtil.isEmpty(scholar.getContent())){
+                continue;
+            }
+            String content = scholar.getContent();
+            if(sensitiveFilter.find(content)) {
+                antiCrawlerStatus  = (int)(count/(double)antiCrawlerSize*100);
+                result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
+//                log.info("重新爬取" + scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
+//                Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
+            }
+        }
+        antiCrawlerSize = result.size();
+        antiCrawlerStatus  = 100;
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+    }
+
+    @GetMapping("/update_status")
+    public void updateStatus(){
+        antiCrawlerStatus = 0;
+        antiCrawlerSize = 0;
+        detailMatchStatus = 0;
+        detailMatchSize = 0;
+        detailStatus = 0;
+        detailSize = 0;
+        imgCrawlerStatus = 0;
+        imgCrawlerSize = 0;
+        crawlerStatus = 0;
+        crawlerSize = 0;
+        loadConfigStatus = 0;
+        loadConfigSize = 0;
+    }
+
 
     @GetMapping("/scholar_update")
     public String scholarUpdate() {
@@ -781,6 +888,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
     @Autowired
     private ScholarConfigureService scholarConfigureService;
+
+
 
     @GetMapping("/analyzeNum")
     public String analyzeNum() {
