@@ -14,6 +14,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.runnable.ScholarTempRunnable;
 import com.sheep.cloud.academic.crawler.service.ScholarConfigureService;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
+import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.academic.crawler.vo.ScholarTempVO;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarDetailSpider;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarImgSpider;
@@ -219,6 +220,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         return resultString;
     }
 
+    LogSaver logSaver = LogSaver.getInstance();
+
     @ApiOperation(value = "根据指定高校院系规则 抓取学者")
     @GetMapping("/crawler")
     public String crawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
@@ -227,6 +230,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         long now = System.currentTimeMillis();
         crawlerStatus = 0;
         crawlerSize = 0;
+        logSaver.clean();
         log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName);
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
@@ -264,7 +268,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         crawlerSize = configures.size();
         for (ScholarConfigure configure : configures) {
             count++;
-            crawlerStatus = (int)(count/(double)crawlerSize*100);
+            crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
@@ -279,8 +283,22 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
 
         log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+
+        count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        for(String str : logSaver.getSaver()){
+            result.put(count++,str);
+            log.info(str);
+        }
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
         crawlerStatus = 100;
-        return DateUtil.millisecondToTime(now);
+        return resultString;
     }
 
 
@@ -308,6 +326,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                              @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
         imgCrawlerSize = 0;
         imgCrawlerStatus = 0;
+        logSaver.clean();
         log.info("/imgCrawler " + refresh + " "  + organizationName + " " + collegeName);
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
@@ -340,7 +359,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
         for (ScholarConfigure configure : configures) {
             count++;
-            imgCrawlerStatus = (int)(count/(double)imgCrawlerSize*100);
+            imgCrawlerStatus = (int)(count/(double)imgCrawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
@@ -355,8 +374,23 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
 
         log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+
+        count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        for(String str : logSaver.getSaver()){
+            log.info(str);
+            result.put(count++,str);
+        }
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
         imgCrawlerStatus =  100;
-        return "success";
+        return resultString;
+//        return "success";
     }
 
     @ApiOperation(value = "用于处理后续发现的一些问题")
@@ -634,6 +668,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
     @GetMapping("/update_status")
     public void updateStatus(){
+        logSaver.clean();
         antiCrawlerStatus = 0;
         antiCrawlerSize = 0;
         detailMatchStatus = 0;

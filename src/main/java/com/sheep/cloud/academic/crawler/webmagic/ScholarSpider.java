@@ -4,12 +4,14 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigure;
 import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
+import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.core.util.BeanCopierUtil;
 import com.sheep.cloud.core.util.CollectionUtil;
 import com.sheep.cloud.core.util.StringUtil;
 import com.sheep.cloud.open.mongodb.util.MongodbUtil;
 import com.sheep.cloud.open.redis.util.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
@@ -28,6 +30,8 @@ import static com.sheep.cloud.core.constants.PatternConstant.EMAIL;
  * @author YangChao
  * @create 2019-05-05 15:31
  **/
+
+
 @Slf4j
 public class ScholarSpider implements PageProcessor {
 
@@ -38,6 +42,8 @@ public class ScholarSpider implements PageProcessor {
     private ScholarConfigure configure;
 
     private String charset;
+
+    LogSaver logSaver = LogSaver.getInstance();
 
     public ScholarSpider(ScholarConfigure configure, String charset) {
         this.configure = configure;
@@ -108,6 +114,7 @@ public class ScholarSpider implements PageProcessor {
                 log.info("=============== Saving process Finished. ===============");
             }
             log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
+
             return;
         }
 
@@ -243,7 +250,9 @@ public class ScholarSpider implements PageProcessor {
             log.info("=============== Saving process Finished. ===============");
             //RedisUtil.setRemove("crawler:scholar:website", configure.getId());
         }
-
+        for(ScholarTemp scholar : scholars){
+            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+        }
         log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }
 

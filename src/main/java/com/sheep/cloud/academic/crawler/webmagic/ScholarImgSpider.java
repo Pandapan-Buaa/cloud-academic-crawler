@@ -4,6 +4,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigure;
 import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
+import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.core.util.CollectionUtil;
 import com.sheep.cloud.core.util.StringUtil;
 import com.sheep.cloud.open.mongodb.util.MongodbUtil;
@@ -34,6 +35,8 @@ public class ScholarImgSpider implements PageProcessor {
     private ScholarConfigure configure;
 
     private String charset;
+
+    LogSaver logSaver = LogSaver.getInstance();
 
     public ScholarImgSpider(ScholarConfigure configure, String charset) {
         this.configure = configure;
@@ -89,7 +92,9 @@ public class ScholarImgSpider implements PageProcessor {
             log.info("=============== Saving process Finished. ===============");
             MongodbUtil.delete(configure.getId(), ScholarConfigureTemp.class);
         }
-
+        for(ScholarTemp scholar : scholars){
+            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+        }
         log.info("ScholarSpider ================== organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }
 

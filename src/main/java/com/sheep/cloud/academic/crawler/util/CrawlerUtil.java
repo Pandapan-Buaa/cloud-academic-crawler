@@ -345,7 +345,7 @@ public class CrawlerUtil extends HtmlUtil {
     public static String detectCharset(String url) {
         String ret = "";
         try {
-            String[] args = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\utildetectCharset.py", String.valueOf(url)};
+            String[] args = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\util\\detectCharset.py", String.valueOf(url)};
             Process proc = Runtime.getRuntime().exec(args);
             BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             ret = in.readLine();
@@ -362,7 +362,7 @@ public class CrawlerUtil extends HtmlUtil {
         List<String> list = new ArrayList<>();
         String ret = "";
         try {
-            String[] args = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\utilgetAllNameLTP.py", String.valueOf(text)};
+            String[] args = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\util\\getAllNameLTP.py", String.valueOf(text)};
             Process proc = Runtime.getRuntime().exec(args);
             BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             ret = in.readLine();
@@ -382,7 +382,7 @@ public class CrawlerUtil extends HtmlUtil {
     public static String startPythonShellToGetName(String text) {
         String ret = "";
         try {
-            String[] args1 = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\utilgetNameLTP.py", String.valueOf(text)};
+            String[] args1 = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\util\\getNameLTP.py", String.valueOf(text)};
             Process proc1 = Runtime.getRuntime().exec(args1);
             BufferedReader in1 = new BufferedReader(new InputStreamReader(proc1.getInputStream()));
             ret = in1.readLine();
@@ -390,7 +390,7 @@ public class CrawlerUtil extends HtmlUtil {
             proc1.destroy();
             assert ret != null;
             if (ret.equals(" ") || ret.length() == 1) {
-                String[] args2 = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\utilgetNameHanlp.py", String.valueOf(text)};
+                String[] args2 = new String[]{"python", "E:\\cloud-academic-crawler\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\util\\getNameHanlp.py", String.valueOf(text)};
                 Process proc2 = Runtime.getRuntime().exec(args2);
                 BufferedReader in2 = new BufferedReader(new InputStreamReader(proc2.getInputStream()));
                 ret = in2.readLine();
