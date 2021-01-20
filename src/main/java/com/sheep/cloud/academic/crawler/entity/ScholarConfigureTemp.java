@@ -38,8 +38,6 @@ public class ScholarConfigureTemp extends BaseEntity {
     @ApiModelProperty(name = "节点")
     private String xpath;
 
-    @ApiModelProperty(name = "是否已抓取")
-    private boolean handled;
 
     public ScholarConfigureTemp(String organizationName, String collegeName, String departmentName, String title, String website, String xpath) {
         this.organizationName = organizationName;
@@ -48,7 +46,6 @@ public class ScholarConfigureTemp extends BaseEntity {
         this.title = title;
         this.website = website;
         this.xpath = xpath;
-        this.handled = false;
     }
 
 }

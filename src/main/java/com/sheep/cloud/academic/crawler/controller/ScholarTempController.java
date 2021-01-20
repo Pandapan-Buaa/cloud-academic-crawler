@@ -364,9 +364,9 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
             Spider.create(new ScholarImgSpider(configure, charset)).addUrl(configure.getWebsite()).thread(1).run();
-            Update update = new Update();
-            update.set("handled", true);
-            MongodbUtil.patch(configure.getId(), update, ScholarConfigureTemp.class);
+//            Update update = new Update();
+//            update.set("handled", true);
+//            MongodbUtil.patch(configure.getId(), update, ScholarConfigureTemp.class);
             if (count % 10 == 0) {
                 log.info("=============== Total count: " + configures.size() + ". ===============");
                 log.info("=============== Finished num: " + count + ". ===============");
