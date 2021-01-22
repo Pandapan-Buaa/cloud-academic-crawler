@@ -478,7 +478,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
-                detailStatus = (int)(count/(double)detailSize*100);
+//                detailStatus = (int)(count/(double)detailSize*100);
                 Update update = new Update();
                 update.set("match", false);
                 MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
@@ -492,14 +492,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } else {
             for (ScholarTemp scholar : scholars) {
                 count++;
-                detailStatus = (int)(count/(double)detailSize*100);
+//                detailStatus = (int)(count/(double)detailSize*100);
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
                 result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarSpiderRunnable(scholar));
+
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
+        }
+        while(executor.getQueue().size() > 0){
+            detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
         }
         detailStatus  = 100;
         try {
@@ -568,7 +572,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
-                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
+//                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 Update update = new Update();
 //                update.set("mainPage", false);
                 update.set("match", false);
@@ -582,13 +586,16 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } else {
             for (ScholarTemp scholar : scholars) {
                 count++;
-                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
+//                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
                 result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
+        }
+        while(executor.getQueue().size() > 0){
+            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
         }
         detailMatchStatus = 100;
         try {
@@ -657,6 +664,10 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
         }
         antiCrawlerSize = result.size();
+        while(executor.getQueue().size() > 0){
+            antiCrawlerStatus = (int)(100 - executor.getQueue().size()/(double)antiCrawlerSize*100);
+        }
+
         antiCrawlerStatus  = 100;
         try {
             resultString = mapper.writeValueAsString(result);
