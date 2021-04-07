@@ -566,9 +566,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
         detailMatchSize  = scholars.size();
         int count = 0;
-        Map<Integer,String> result = new HashMap<>();
-        ObjectMapper mapper = new ObjectMapper();
-        String resultString = "";
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
@@ -580,7 +577,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
-                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
+//                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         } else {
@@ -590,7 +587,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
-                result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
+//                result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         }
@@ -598,11 +595,23 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
         }
         detailMatchStatus = 100;
+
+        count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        scholars = MongodbUtil.select(param, ScholarTemp.class);
+        for (ScholarTemp scholar : scholars) {
+            count++;
+            result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName() + " " + scholar.getTitle() + " " + scholar.getEmail() + " " + scholar.getPhone() + " " + scholar.getId() + " " + scholar.getScholarId());
+        }
+
         try {
             resultString = mapper.writeValueAsString(result);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+
         return resultString;
 //        return UPDATE_INFO.toString();
     }

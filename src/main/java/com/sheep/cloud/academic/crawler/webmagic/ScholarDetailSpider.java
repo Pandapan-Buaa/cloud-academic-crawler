@@ -32,6 +32,7 @@ public class ScholarDetailSpider implements PageProcessor {
     @Override
     public void process(Page page) {
         Html html = page.getHtml();
+
         String content = dealContent(html);
         if (StringUtil.isEmpty(content)) {
             return;
@@ -47,7 +48,6 @@ public class ScholarDetailSpider implements PageProcessor {
 
     private String dealContent(Selectable selectable) {
         String result = CrawlerUtil.getTextTrim(selectable);
-
         if (result.contains("系统提示") && result.contains("页面") && (result.contains("不存在") || result.contains("迁移") || result.contains("出错") || result.contains("无法访问"))) {
             return null;
         } else {

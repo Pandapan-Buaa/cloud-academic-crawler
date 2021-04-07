@@ -221,7 +221,7 @@ public class CrawlerUtil extends HtmlUtil {
              * 是否找到第一个就break的问题也可视情况调整
              */
             List<Integer> flagList = new ArrayList<>();
-            final int LEN_LIMIT = 10;
+            final int LEN_LIMIT = 100;
             for (int i = 1; i < items.length; i++) {
                 if (items[i].contains(scholar.getName())) {
                     if (!items[i].contains(scholar.getOrganizationName())) {

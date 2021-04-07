@@ -4,10 +4,12 @@ package com.sheep.cloud.academic.crawler.util;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class LogSaver {
 
-    private ArrayList<String> saver = new ArrayList<String>();
+    private List<String> saver = Collections.synchronizedList(new ArrayList<>());
     private static LogSaver instance = new LogSaver();
     private LogSaver(){}
 
@@ -23,7 +25,7 @@ public class LogSaver {
         saver.add(str);
     }
 
-    public ArrayList<String> getSaver(){
+    public List<String> getSaver(){
         return saver;
     }
 }
