@@ -448,7 +448,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
             @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
             @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        long now = System.currentTimeMillis();
         detailStatus = 0;
         detailSize = 0;
         log.info("/detail " + refresh + " " + organizationName + " " + collegeName);
@@ -462,13 +461,12 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if(refresh == false){
             param.addTerm(Term.build("mainPage", false));
         }
-        //param.addTerm(Term.build("organizationName", "中国农业科学院农产品加工研究所"));
-        //param.addTerm(Term.build("name", "胡萍"));
         log.info("=============== Start loading scholars from Database! ===============");
         if(!refresh){
             param.addTerm(Term.build("content", TermTypeEnum.NULL, null));
         }
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
+
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
         detailSize = scholars.size();
         int count = 0;
@@ -478,10 +476,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
-//                detailStatus = (int)(count/(double)detailSize*100);
-                Update update = new Update();
-                update.set("match", false);
-                MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
@@ -492,7 +486,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } else {
             for (ScholarTemp scholar : scholars) {
                 count++;
-//                detailStatus = (int)(count/(double)detailSize*100);
                 if (StringUtil.isEmpty(scholar.getWebsite())) {
                     continue;
                 }
@@ -505,14 +498,13 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         while(executor.getQueue().size() > 0){
             detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
         }
-        detailStatus  = 100;
         try {
             resultString = mapper.writeValueAsString(result);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+        detailStatus  = 100;
         return resultString;
-//        return DateUtil.millisecondToTime(now);
     }
 
     int detailMatchStatus = 0;
@@ -540,7 +532,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
             @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
             @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        long now = System.currentTimeMillis();
         detailMatchStatus = 0;
         detailMatchSize = 0;
         log.info("/detail_match " + refresh + " " + organizationName + " " + collegeName);
@@ -554,13 +545,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if(refresh == false){
             param.addTerm(Term.build("match", false));
         }
-        /*
-        param.addSort("organizationName", SortEnum.DESC);
-        log.info("=============== Start matching detail! ===============");
-        MongodbUtil.selectScroll(param, ScholarTemp.class, ScholarTempRunnable.class);
-        log.info("=============== Detail match finished! ===============");
-         */
-        //param.addTerm(Term.build("organizationName", organizationName));
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
@@ -569,32 +553,27 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
                 count++;
-//                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 Update update = new Update();
-//                update.set("mainPage", false);
                 update.set("match", false);
                 MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
-//                result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         } else {
             for (ScholarTemp scholar : scholars) {
                 count++;
-//                detailMatchStatus = (int)(count/(double)detailMatchSize*100);
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
-//                result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
         }
         while(executor.getQueue().size() > 0){
             detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
         }
-        detailMatchStatus = 100;
+
 
         count = 0;
         Map<Integer,String> result = new HashMap<>();
@@ -612,8 +591,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             e.printStackTrace();
         }
 
+        detailMatchStatus = 100;
         return resultString;
-//        return UPDATE_INFO.toString();
     }
 
     @Autowired

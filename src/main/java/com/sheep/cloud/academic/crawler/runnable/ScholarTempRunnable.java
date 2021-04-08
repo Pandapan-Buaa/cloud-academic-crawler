@@ -43,6 +43,7 @@ public class ScholarTempRunnable implements Runnable {
             String email;
             String phone;
 
+
             content = scholar.getContent();
             title = matchTitle(content);
             email = matchEmail(content);
@@ -52,6 +53,7 @@ public class ScholarTempRunnable implements Runnable {
             Update update = new Update();
             boolean flag = false;
 //            log.info(title + " " + email + " " + phone );
+//            (StringUtil.isEmpty(scholar.getTitle()) || "null".equals(scholar.getTitle())) && StringUtil.isNotEmpty(title)
             if ((StringUtil.isEmpty(scholar.getTitle()) || "null".equals(scholar.getTitle())) && StringUtil.isNotEmpty(title)) {
                 flag = true;
                 update.set("title", title);
@@ -64,13 +66,15 @@ public class ScholarTempRunnable implements Runnable {
                 flag = true;
                 update.set("phone", phone);
             }
-            update.set("match", true);
 
             if (flag) {
 //                update.set("match", true);
                 log.info("================ update:{}", JSON.toJSONString(update));
-                MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
+
             }
+            update.set("match",true);
+            MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
