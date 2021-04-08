@@ -16,6 +16,7 @@ import com.sheep.cloud.academic.crawler.service.ScholarConfigureService;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
 import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.academic.crawler.vo.ScholarTempVO;
+import com.sheep.cloud.academic.crawler.webmagic.HttpsClientDownloader;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarDetailSpider;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarImgSpider;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarSpider;
@@ -266,16 +267,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         int count = 0;
         crawlerSize = configures.size();
+
         for (ScholarConfigure configure : configures) {
             count++;
             crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
-            Spider.create(new ScholarSpider(configure, charset)).addUrl(configure.getWebsite()).thread(1).run();
+            Spider.create(new ScholarSpider(configure, charset)).setDownloader(new HttpsClientDownloader()).addUrl(configure.getWebsite()).thread(1).run();
+
             Update update = new Update();
             update.set("handled", true);
-            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
+//            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
             if (count % 10 == 0) {
                 log.info("=============== Total count: " + configures.size() + ". ===============");
                 log.info("=============== Finished num: " + count + ". ===============");
@@ -335,9 +338,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (!collegeName.equals("all")) {
             param.addTerm(Term.build("collegeName", collegeName));
         }
-        if(!refresh){
-            param.addTerm(Term.build("handled", false));
-        }
 
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarConfigureTemp> configureTemps = MongodbUtil.select(param, ScholarConfigureTemp.class);
@@ -363,7 +363,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
-            Spider.create(new ScholarImgSpider(configure, charset)).addUrl(configure.getWebsite()).thread(1).run();
+            Spider.create(new ScholarImgSpider(configure, charset)).setDownloader(new HttpsClientDownloader()).addUrl(configure.getWebsite()).thread(1).run();
+
 //            Update update = new Update();
 //            update.set("handled", true);
 //            MongodbUtil.patch(configure.getId(), update, ScholarConfigureTemp.class);
@@ -648,7 +649,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 antiCrawlerStatus  = (int)(count/(double)antiCrawlerSize*100);
                 result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
 //                log.info("重新爬取" + scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
-//                Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
+//               Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader()).addUrl(scholar.getWebsite()).run();
             }
         }
         antiCrawlerSize = result.size();
@@ -915,7 +916,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
         @Override
         public void run() {
-            Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
+            Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader()).addUrl(scholar.getWebsite()).run();
             //Spider.create(new ScholarDetailSpider(scholar, "GBK")).addUrl(scholar.getWebsite()).run();
         }
     }

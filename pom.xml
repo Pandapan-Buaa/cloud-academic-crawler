@@ -13,6 +13,10 @@
     <artifactId>cloud-academic-crawler</artifactId>
     <packaging>jar</packaging>
 
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.sheep.cloud</groupId>
