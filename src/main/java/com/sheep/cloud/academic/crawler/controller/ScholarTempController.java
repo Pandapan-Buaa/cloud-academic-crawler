@@ -38,15 +38,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
-import us.codecraft.webmagic.Spider;
-
+//import us.codecraft.webmagic.Spider;
+import com.sheep.cloud.academic.crawler.webmagic.Spider;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 
 /**
@@ -139,7 +136,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         return resultString;
     }
-
+    HashSet<String> set = new HashSet<>();
     @ApiOperation(value = "添加config文件")
     @GetMapping("/load_config")
     public String loadConfig() {
@@ -191,6 +188,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     configure.setXpath(arrList.get(5));
                     ScholarConfigure temp = BeanCopierUtil.copy(configure, ScholarConfigure.class);
                     MongodbUtil.save(temp);
+                    set.add(arrList.get(0) + " " + arrList.get(1));
                 }
                 log.info("=============== File: " + fileName + " finished! ===============");
                 File deleteFile = new File(path + "//" + fileName);
@@ -278,7 +276,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
             Update update = new Update();
             update.set("handled", true);
-//            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
+            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
             if (count % 10 == 0) {
                 log.info("=============== Total count: " + configures.size() + ". ===============");
                 log.info("=============== Finished num: " + count + ". ===============");
@@ -358,6 +356,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         imgCrawlerSize = configures.size();
 
         for (ScholarConfigure configure : configures) {
+//            set.add(configure.getOrganizationName() + " " + configure.getCollegeName());
             count++;
             imgCrawlerStatus = (int)(count/(double)imgCrawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
@@ -570,17 +569,33 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 }
                 executor.execute(new ScholarTempRunnable(scholar));
             }
+
         }
         while(executor.getQueue().size() > 0){
             detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
         }
-
+        if(refresh == false){
+            scholars = new ArrayList<ScholarTemp>();
+            for(String s : set){
+                System.out.println(s);
+                param = new QueryParam();
+                String[] split =  s.split(" ");
+                param.addTerm(Term.build("organizationName", split[0]));
+                param.addTerm(Term.build("collegeName", split[1]));
+                scholars.addAll( MongodbUtil.select(param, ScholarTemp.class));
+            }
+            detailMatchSize  = scholars.size();
+            set.clear();
+        }else{
+            detailMatchSize  = scholars.size();
+            scholars = MongodbUtil.select(param, ScholarTemp.class);
+        }
 
         count = 0;
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
-        scholars = MongodbUtil.select(param, ScholarTemp.class);
+
         for (ScholarTemp scholar : scholars) {
             count++;
             result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName() + " " + scholar.getTitle() + " " + scholar.getEmail() + " " + scholar.getPhone() + " " + scholar.getId() + " " + scholar.getScholarId());
@@ -591,10 +606,69 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
+//        System.out.println(resultString);
         detailMatchStatus = 100;
         return resultString;
     }
+
+    @ApiOperation(value = "错误信息接口")
+    @GetMapping("/errors")
+    public String errors() {
+        Map<Integer, String> map = new HashMap<>();
+        int count = 1;
+        for(String s : logSaver.getErrsaver()){
+            map.put(count++,s);
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        try {
+            resultString = mapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+    }
+
+
+    @GetMapping(path = {"/detail_match_test"})
+    public String detailMatchTest(
+            @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
+        log.info("/detail_match_test " + refresh + " " + organizationName + " " + collegeName);
+        QueryParam param = new QueryParam();
+//        if (!organizationName.equals("all")) {
+//            param.addTerm(Term.build("organizationName", organizationName));
+//        }
+//        if (!collegeName.equals("all")) {
+//            param.addTerm(Term.build("collegeName", collegeName));
+//        }
+//        if (refresh == false) {
+//            param.addTerm(Term.build("match", false));
+//        }
+        param.addTerm(Term.build("organizationName", "北京工业大学"));
+//        param.addTerm(Term.build("organizationName", "成都文理学院"));
+        List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
+
+        int count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        for (ScholarTemp scholar : scholars) {
+            count++;
+            System.out.println(scholar.getName());
+            result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName() + " " + scholar.getTitle() + " " + scholar.getEmail() + " " + scholar.getPhone() + " " + scholar.getId() + " " + scholar.getScholarId());
+        }
+
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        return resultString;
+    }
+
 
     @Autowired
     private SensitiveFilter sensitiveFilter;
@@ -1019,6 +1093,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         writer.close();
         return "success";
     }
+
 
     @Data
     private static class UniversityCollege {

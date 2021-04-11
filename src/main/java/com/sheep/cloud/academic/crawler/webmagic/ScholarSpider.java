@@ -113,6 +113,10 @@ public class ScholarSpider implements PageProcessor {
                 MongodbUtil.save(scholars);
                 log.info("=============== Saving process Finished. ===============");
             }
+            if(scholars.size() == 0){
+                log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+                logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+            }
             log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
 
             return;
@@ -252,6 +256,10 @@ public class ScholarSpider implements PageProcessor {
         }
         for(ScholarTemp scholar : scholars){
             logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+        }
+        if(scholars.size() == 0){
+            log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+            logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
         }
         log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }
