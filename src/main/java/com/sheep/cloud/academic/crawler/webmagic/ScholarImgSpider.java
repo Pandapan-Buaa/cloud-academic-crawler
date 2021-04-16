@@ -5,6 +5,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
 import com.sheep.cloud.academic.crawler.util.LogSaver;
+import com.sheep.cloud.academic.crawler.util.StatuMap;
 import com.sheep.cloud.core.util.CollectionUtil;
 import com.sheep.cloud.core.util.StringUtil;
 import com.sheep.cloud.open.mongodb.util.MongodbUtil;
@@ -35,12 +36,13 @@ public class ScholarImgSpider implements PageProcessor {
     private ScholarConfigure configure;
 
     private String charset;
+    private String namehash;
+//    LogSaver logSaver = LogSaver.getInstance();
 
-    LogSaver logSaver = LogSaver.getInstance();
-
-    public ScholarImgSpider(ScholarConfigure configure, String charset) {
+    public ScholarImgSpider(ScholarConfigure configure, String charset,String namehash) {
         this.configure = configure;
         this.charset = charset;
+        this.namehash  = namehash;
     }
 
     @Override
@@ -93,7 +95,8 @@ public class ScholarImgSpider implements PageProcessor {
             MongodbUtil.delete(configure.getId(), ScholarConfigureTemp.class);
         }
         for(ScholarTemp scholar : scholars){
-            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+//            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+            StatuMap.getInstance().getStatumap().get(namehash).saver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
         }
         log.info("ScholarSpider ================== organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }

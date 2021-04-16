@@ -5,6 +5,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
 import com.sheep.cloud.academic.crawler.util.LogSaver;
+import com.sheep.cloud.academic.crawler.util.StatuMap;
 import com.sheep.cloud.core.util.BeanCopierUtil;
 import com.sheep.cloud.core.util.CollectionUtil;
 import com.sheep.cloud.core.util.StringUtil;
@@ -42,12 +43,13 @@ public class ScholarSpider implements PageProcessor {
     private ScholarConfigure configure;
 
     private String charset;
+    private String namehash;
+//    LogSaver logSaver = LogSaver.getInstance();
 
-    LogSaver logSaver = LogSaver.getInstance();
-
-    public ScholarSpider(ScholarConfigure configure, String charset) {
+    public ScholarSpider(ScholarConfigure configure, String charset, String namehash) {
         this.configure = configure;
         this.charset = charset;
+        this.namehash = namehash;
     }
 
     @Override
@@ -115,7 +117,8 @@ public class ScholarSpider implements PageProcessor {
             }
             if(scholars.size() == 0){
                 log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
-                logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+                StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+//                logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
             }
             log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
 
@@ -255,11 +258,13 @@ public class ScholarSpider implements PageProcessor {
             //RedisUtil.setRemove("crawler:scholar:website", configure.getId());
         }
         for(ScholarTemp scholar : scholars){
-            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+//            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
+            StatuMap.getInstance().getStatumap().get(namehash).saver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
         }
         if(scholars.size() == 0){
             log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
-            logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+//            logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+            StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
         }
         log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }

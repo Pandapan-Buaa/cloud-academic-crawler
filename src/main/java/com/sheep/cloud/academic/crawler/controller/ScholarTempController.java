@@ -13,8 +13,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.runnable.ScholarTempRunnable;
 import com.sheep.cloud.academic.crawler.service.ScholarConfigureService;
-import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
-import com.sheep.cloud.academic.crawler.util.LogSaver;
+import com.sheep.cloud.academic.crawler.util.*;
 import com.sheep.cloud.academic.crawler.vo.ScholarTempVO;
 import com.sheep.cloud.academic.crawler.webmagic.HttpsClientDownloader;
 import com.sheep.cloud.academic.crawler.webmagic.ScholarDetailSpider;
@@ -25,7 +24,6 @@ import com.sheep.cloud.core.enums.Term;
 import com.sheep.cloud.core.enums.TermTypeEnum;
 import com.sheep.cloud.core.util.*;
 import com.sheep.cloud.open.mongodb.util.MongodbUtil;
-import com.sheep.cloud.academic.crawler.util.SensitiveFilter;
 import com.sheep.cloud.open.redis.util.RedisUtil;
 import com.sheep.cloud.web.controller.BaseCrudController;
 import com.sheep.cloud.web.controller.util.QueryParamUtil;
@@ -118,15 +116,20 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 //        }
         return null;
     }
+    ConcurrentHashMap<String, InnerStatu> statumap = StatuMap.getInstance().getStatumap();
 
-    int loadConfigStatus = 0;
-    int loadConfigSize = 0;
+//    int loadConfigStatus = 0;
+//    int loadConfigSize = 0;
     @ApiOperation(value = "load-config状态")
     @GetMapping("/load_config_status")
-    public String loadConfigStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", loadConfigStatus);
-        map.put("size", loadConfigSize);
+    public String loadConfigStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.loadConfigStatus);
+        map.put("size", statu.loadConfigSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -136,13 +139,19 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         return resultString;
     }
-    HashSet<String> set = new HashSet<>();
+//    HashSet<String> set = new HashSet<>();
     @ApiOperation(value = "添加config文件")
     @GetMapping("/load_config")
-    public String loadConfig() {
+    public String loadConfig(@RequestParam(value = "name", required = true) String name) {
         long now = System.currentTimeMillis();
-        loadConfigStatus = 0;
-        loadConfigSize = 0;
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.loadConfigStatus = 0;
+        statu.loadConfigSize = 0;
+//        loadConfigStatus = 0;
+//        loadConfigSize = 0;
         /*
         String dir = FileUtil.getAbsolutePath(new File(""));
         String path = dir + "\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\data";
@@ -162,13 +171,15 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     return DateUtil.millisecondToTime(now);
                 }
                 log.info("=============== Total lines: " + lines.size());
-                loadConfigSize = lines.size();
+//                loadConfigSize = lines.size();
+                statu.loadConfigSize = lines.size();
                 List<String> arrList;
                 ScholarConfigure configure;
                 int count = 0;
                 for (String line : lines) {
                     count++;
-                    loadConfigStatus = ((int)(count/(double)loadConfigSize*100));
+                    statu.loadConfigStatus = ((long)(count/(double)statu.loadConfigSize * 100));
+//                    loadConfigStatus = ((int)(count/(double)loadConfigSize*100));
                     if (count % 50 == 0) {
                         log.info("=============== Line count: " + count);
                     }
@@ -188,7 +199,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     configure.setXpath(arrList.get(5));
                     ScholarConfigure temp = BeanCopierUtil.copy(configure, ScholarConfigure.class);
                     MongodbUtil.save(temp);
-                    set.add(arrList.get(0) + " " + arrList.get(1));
+                    statu.set.add(arrList.get(0) + " " + arrList.get(1));
+//                    set.add(arrList.get(0) + " " + arrList.get(1));
                 }
                 log.info("=============== File: " + fileName + " finished! ===============");
                 File deleteFile = new File(path + "//" + fileName);
@@ -201,14 +213,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     }
 
 
-    int crawlerStatus = 0;
-    int crawlerSize = 0;
+//    int crawlerStatus = 0;
+//    int crawlerSize = 0;
     @ApiOperation(value = "抓取学者状态")
     @GetMapping("/crawler_status")
-    public String crawlerStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", crawlerStatus);
-        map.put("size", crawlerSize);
+    public String crawlerStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.crawlerStatus);
+        map.put("size", statu.crawlerSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -219,18 +235,27 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         return resultString;
     }
 
-    LogSaver logSaver = LogSaver.getInstance();
+//    LogSaver logSaver = LogSaver.getInstance();
 
     @ApiOperation(value = "根据指定高校院系规则 抓取学者")
     @GetMapping("/crawler")
     public String crawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
                           @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-                          @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
+                          @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+                          @RequestParam(value = "name", required = true) String name) {
         long now = System.currentTimeMillis();
-        crawlerStatus = 0;
-        crawlerSize = 0;
-        logSaver.clean();
-        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName);
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.crawlerSize = 0 ;
+        statu.crawlerStatus = 0;
+//        crawlerStatus = 0;
+//        crawlerSize = 0;
+//        logSaver.clean();
+        statu.logclear();
+        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName + " " + name);
+
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
             param.addTerm(Term.build("organizationName", organizationName));
@@ -260,19 +285,22 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         ScholarConfigure configure1 = new ScholarConfigure("西安科技大学", "理学院", "", "教授", "https://skxy.qhnu.edu.cn/xygk/szdw.htm", "//*[@id=\"vsb_content_1117_u91\"]");
         configures.add(configure1);*/
         if (CollectionUtil.isEmpty(configures)) {
-            crawlerStatus = 100;
+            statu.crawlerStatus = 100;
+//            crawlerStatus = 100;
             return DateUtil.millisecondToTime(now);
         }
         int count = 0;
-        crawlerSize = configures.size();
+        statu.crawlerSize = configures.size();
+//        crawlerSize = configures.size();
 
         for (ScholarConfigure configure : configures) {
             count++;
-            crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
+            statu.crawlerStatus = (long)(count/(double)statu.crawlerSize*100) - 1;
+//            crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
-            Spider.create(new ScholarSpider(configure, charset)).setDownloader(new HttpsClientDownloader()).addUrl(configure.getWebsite()).thread(1).run();
+            Spider.create(new ScholarSpider(configure, charset,name),name).setDownloader(new HttpsClientDownloader(name)).addUrl(configure.getWebsite()).thread(1).run();
 
             Update update = new Update();
             update.set("handled", true);
@@ -289,7 +317,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
-        for(String str : logSaver.getSaver()){
+        for(String str : statu.saver){
             result.put(count++,str);
             log.info(str);
         }
@@ -298,19 +326,24 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        crawlerStatus = 100;
+        statu.crawlerStatus = 100;
+//        crawlerStatus = 100;
         return resultString;
     }
 
 
-    int imgCrawlerStatus = 0;
-    int imgCrawlerSize = 0;
+//    int imgCrawlerStatus = 0;
+//    int imgCrawlerSize = 0;
     @ApiOperation(value = "抓取学者状态")
     @GetMapping("/imgCrawler_status")
-    public String imgCrawlerStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", imgCrawlerStatus);
-        map.put("size", imgCrawlerSize);
+    public String imgCrawlerStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.imgCrawlerStatus);
+        map.put("size", statu.imgCrawlerSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -324,11 +357,19 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     @GetMapping("/imgCrawler")
     public String imgCrawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
                              @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-                             @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        imgCrawlerSize = 0;
-        imgCrawlerStatus = 0;
-        logSaver.clean();
-        log.info("/imgCrawler " + refresh + " "  + organizationName + " " + collegeName);
+                             @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+                             @RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.imgCrawlerSize = 0;
+        statu.imgCrawlerStatus = 0;
+//        imgCrawlerSize = 0;
+//        imgCrawlerStatus = 0;
+//        logSaver.clean();
+        statu.logclear();
+        log.info("/imgCrawler " + refresh + " "  + organizationName + " " + collegeName + " " + name);
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
             param.addTerm(Term.build("organizationName", organizationName));
@@ -353,16 +394,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         configures.add(configure1);*/
 
         int count = 0;
-        imgCrawlerSize = configures.size();
+        statu.imgCrawlerSize = configures.size();
+//        imgCrawlerSize = configures.size();
 
         for (ScholarConfigure configure : configures) {
 //            set.add(configure.getOrganizationName() + " " + configure.getCollegeName());
             count++;
-            imgCrawlerStatus = (int)(count/(double)imgCrawlerSize*100) - 1;
+            statu.imgCrawlerStatus = (long)(count/(double)statu.imgCrawlerSize * 100 ) - 1;
+//            imgCrawlerStatus = (int)(count/(double)imgCrawlerSize*100) - 1;
             log.info("=============== Python INFO: Detecting web charset ······ ===============");
             String charset = CrawlerUtil.detectCharset(configure.getWebsite());
             log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
-            Spider.create(new ScholarImgSpider(configure, charset)).setDownloader(new HttpsClientDownloader()).addUrl(configure.getWebsite()).thread(1).run();
+            Spider.create(new ScholarImgSpider(configure, charset,name),name).setDownloader(new HttpsClientDownloader(name)).addUrl(configure.getWebsite()).thread(1).run();
 
 //            Update update = new Update();
 //            update.set("handled", true);
@@ -379,7 +422,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
-        for(String str : logSaver.getSaver()){
+        for(String str : statu.saver){
             log.info(str);
             result.put(count++,str);
         }
@@ -388,7 +431,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        imgCrawlerStatus =  100;
+        statu.imgCrawlerStatus  = 100;
+//        imgCrawlerStatus =  100;
         return resultString;
 //        return "success";
     }
@@ -423,14 +467,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     }
 
 
-    int detailStatus = 0;
-    int detailSize = 0;
+//    int detailStatus = 0;
+//    int detailSize = 0;
     @ApiOperation(value = "抓取学者详情状态")
     @GetMapping("/detail_status")
-    public String detailStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", detailStatus);
-        map.put("size", detailSize);
+    public String detailStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.detailStatus);
+        map.put("size", statu.detailSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -447,10 +495,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     public String detail(
             @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
             @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        detailStatus = 0;
-        detailSize = 0;
-        log.info("/detail " + refresh + " " + organizationName + " " + collegeName);
+            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+            @RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.detailSize = 0;
+        statu.detailStatus = 0;
+//        detailStatus = 0;
+//        detailSize = 0;
+        log.info("/detail " + refresh + " " + organizationName + " " + collegeName + " " + name);
+        //
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
             param.addTerm(Term.build("organizationName", organizationName));
@@ -468,7 +524,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
 
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
-        detailSize = scholars.size();
+//        detailSize = scholars.size();
+        statu.detailSize = scholars.size();
         int count = 0;
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
@@ -480,7 +537,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     continue;
                 }
                 result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
-                executor.execute(new ScholarSpiderRunnable(scholar));
+                executor.execute(new ScholarSpiderRunnable(scholar,name));
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
         } else {
@@ -490,31 +547,38 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     continue;
                 }
                 result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
-                executor.execute(new ScholarSpiderRunnable(scholar));
+                executor.execute(new ScholarSpiderRunnable(scholar,name));
 
                 //Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).addUrl(scholar.getWebsite()).run();
             }
         }
+        //
         while(executor.getQueue().size() > 0){
-            detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
+//            detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
+            statu.detailStatus = (long)(100 - executor.getQueue().size()/(double)statu.detailSize*100);
         }
         try {
             resultString = mapper.writeValueAsString(result);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        detailStatus  = 100;
+//        detailStatus  = 100;
+        statu.detailStatus = 100;
         return resultString;
     }
 
-    int detailMatchStatus = 0;
-    int detailMatchSize = 0;
+//    int detailMatchStatus = 0;
+//    int detailMatchSize = 0;
     @ApiOperation(value = "抓取学者详情状态")
     @GetMapping("/detail_match_status")
-    public String detailMatchStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", detailMatchStatus);
-        map.put("size", detailMatchSize);
+    public String detailMatchStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.detailMatchStatus);
+        map.put("size", statu.detailMatchSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -531,10 +595,17 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     public String detailMatch(
             @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
             @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        detailMatchStatus = 0;
-        detailMatchSize = 0;
-        log.info("/detail_match " + refresh + " " + organizationName + " " + collegeName);
+            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+            @RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+//        detailMatchStatus = 0;
+//        detailMatchSize = 0;
+        statu.detailMatchStatus = 0;
+        statu.detailMatchSize = 0;
+        log.info("/detail_match " + refresh + " " + organizationName + " " + collegeName + " " + name );
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
             param.addTerm(Term.build("organizationName", organizationName));
@@ -548,7 +619,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
-        detailMatchSize  = scholars.size();
+//        detailMatchSize  = scholars.size();
+        statu.detailMatchSize = scholars.size();
         int count = 0;
         if (refresh) {
             for (ScholarTemp scholar : scholars) {
@@ -572,11 +644,12 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
         }
         while(executor.getQueue().size() > 0){
-            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
+            statu.detailMatchStatus  = (long)(100 - executor.getQueue().size()/(double) statu.detailMatchSize*100);
+//            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
         }
         if(refresh == false){
             scholars = new ArrayList<ScholarTemp>();
-            for(String s : set){
+            for(String s : statu.set){
                 System.out.println(s);
                 param = new QueryParam();
                 String[] split =  s.split(" ");
@@ -584,10 +657,13 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 param.addTerm(Term.build("collegeName", split[1]));
                 scholars.addAll( MongodbUtil.select(param, ScholarTemp.class));
             }
-            detailMatchSize  = scholars.size();
-            set.clear();
+            statu.detailMatchSize = scholars.size();
+//            System.out.println("*****" + scholars.size());
+//           detailMatchSize  = scholars.size();
+            statu.set.clear();
         }else{
-            detailMatchSize  = scholars.size();
+            statu.detailMatchSize = scholars.size();
+//            detailMatchSize  = scholars.size();
             scholars = MongodbUtil.select(param, ScholarTemp.class);
         }
 
@@ -607,16 +683,21 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             e.printStackTrace();
         }
 //        System.out.println(resultString);
-        detailMatchStatus = 100;
+//        detailMatchStatus = 100;
+        statu.detailMatchStatus = 100;
         return resultString;
     }
 
     @ApiOperation(value = "错误信息接口")
     @GetMapping("/errors")
-    public String errors() {
+    public String errors(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
         Map<Integer, String> map = new HashMap<>();
         int count = 1;
-        for(String s : logSaver.getErrsaver()){
+        for(String s : statu.errsaver){
             map.put(count++,s);
         }
         ObjectMapper mapper = new ObjectMapper();
@@ -630,56 +711,20 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     }
 
 
-    @GetMapping(path = {"/detail_match_test"})
-    public String detailMatchTest(
-            @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
-            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-            @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh) {
-        log.info("/detail_match_test " + refresh + " " + organizationName + " " + collegeName);
-        QueryParam param = new QueryParam();
-//        if (!organizationName.equals("all")) {
-//            param.addTerm(Term.build("organizationName", organizationName));
-//        }
-//        if (!collegeName.equals("all")) {
-//            param.addTerm(Term.build("collegeName", collegeName));
-//        }
-//        if (refresh == false) {
-//            param.addTerm(Term.build("match", false));
-//        }
-        param.addTerm(Term.build("organizationName", "北京工业大学"));
-//        param.addTerm(Term.build("organizationName", "成都文理学院"));
-        List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
-
-        int count = 0;
-        Map<Integer,String> result = new HashMap<>();
-        ObjectMapper mapper = new ObjectMapper();
-        String resultString = "";
-        for (ScholarTemp scholar : scholars) {
-            count++;
-            System.out.println(scholar.getName());
-            result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName() + " " + scholar.getTitle() + " " + scholar.getEmail() + " " + scholar.getPhone() + " " + scholar.getId() + " " + scholar.getScholarId());
-        }
-
-        try {
-            resultString = mapper.writeValueAsString(result);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-
-        return resultString;
-    }
-
-
     @Autowired
     private SensitiveFilter sensitiveFilter;
-    int antiCrawlerStatus = 0;
-    int antiCrawlerSize = 0;
+//    int antiCrawlerStatus = 0;
+//    int antiCrawlerSize = 0;
     @ApiOperation(value = "反爬虫详情状态")
     @GetMapping("/anti_crawler_status")
-    public String antiCrawlerStatus() {
-        Map<String, Integer> map = new HashMap<>();
-        map.put("progress", antiCrawlerStatus);
-        map.put("size", antiCrawlerSize);
+    public String antiCrawlerStatus(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<String, Long> map = new HashMap<>();
+        map.put("progress", statu.antiCrawlerStatus);
+        map.put("size", statu.antiCrawlerSize);
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
         try {
@@ -694,11 +739,18 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     @GetMapping(path = {"/anti_crawler"})
     public String antiCrawler(
             @RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
-            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName) {
+            @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+            @RequestParam(value = "name", required = true) String name) {
         long now = System.currentTimeMillis();
-        antiCrawlerStatus = 0;
-        antiCrawlerSize = 0;
-        log.info("/anti_crawler " + organizationName + " " + collegeName);
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.antiCrawlerSize = 0 ;
+        statu.antiCrawlerStatus = 0;
+//        antiCrawlerStatus = 0;
+//        antiCrawlerSize = 0;
+        log.info("/anti_crawler " + organizationName + " " + collegeName + " " + name);
         QueryParam param = new QueryParam();
         if (!organizationName.equals("all")) {
             param.addTerm(Term.build("organizationName", organizationName));
@@ -709,7 +761,8 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
-        antiCrawlerSize = scholars.size();
+//        antiCrawlerSize = scholars.size();
+        statu.antiCrawlerSize = scholars.size();
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
@@ -720,41 +773,51 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
             String content = scholar.getContent();
             if(sensitiveFilter.find(content)) {
-                antiCrawlerStatus  = (int)(count/(double)antiCrawlerSize*100);
+                statu.antiCrawlerStatus = (long)(count/(double)statu.antiCrawlerSize*100);
+//                antiCrawlerStatus  = (int)(count/(double)antiCrawlerSize*100);
                 result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
 //                log.info("重新爬取" + scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
-//               Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader()).addUrl(scholar.getWebsite()).run();
+//               Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader(name)).addUrl(scholar.getWebsite()).run();
             }
         }
-        antiCrawlerSize = result.size();
+        statu.antiCrawlerSize = result.size();
+//        antiCrawlerSize = result.size();
         while(executor.getQueue().size() > 0){
-            antiCrawlerStatus = (int)(100 - executor.getQueue().size()/(double)antiCrawlerSize*100);
+            statu.antiCrawlerStatus = (long)(100-executor.getQueue().size()/(double)statu.antiCrawlerSize*100);
+//            antiCrawlerStatus = (int)(100 - executor.getQueue().size()/(double)antiCrawlerSize*100);
         }
 
-        antiCrawlerStatus  = 100;
+//        antiCrawlerStatus  = 100;
         try {
             resultString = mapper.writeValueAsString(result);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+        statu.antiCrawlerStatus = 100;
         return resultString;
     }
 
     @GetMapping("/update_status")
-    public void updateStatus(){
-        logSaver.clean();
-        antiCrawlerStatus = 0;
-        antiCrawlerSize = 0;
-        detailMatchStatus = 0;
-        detailMatchSize = 0;
-        detailStatus = 0;
-        detailSize = 0;
-        imgCrawlerStatus = 0;
-        imgCrawlerSize = 0;
-        crawlerStatus = 0;
-        crawlerSize = 0;
-        loadConfigStatus = 0;
-        loadConfigSize = 0;
+    public void updateStatus(@RequestParam(value = "name", required = true) String name){
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.clear();
+
+//        logSaver.clean();
+//        antiCrawlerStatus = 0;
+//        antiCrawlerSize = 0;
+//        detailMatchStatus = 0;
+//        detailMatchSize = 0;
+//        detailStatus = 0;
+//        detailSize = 0;
+//        imgCrawlerStatus = 0;
+//        imgCrawlerSize = 0;
+//        crawlerStatus = 0;
+//        crawlerSize = 0;
+//        loadConfigStatus = 0;
+//        loadConfigSize = 0;
     }
 
 
@@ -882,7 +945,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             if (StringUtil.isEmpty(temp.getWebsite())) {
                 continue;
             }
-            Spider.create(new ScholarDetailSpider(temp, temp.getWebsite())).addUrl(temp.getWebsite()).run();
+            Spider.create(new ScholarDetailSpider(temp, temp.getWebsite()),"").addUrl(temp.getWebsite()).run();
         }
         return DateUtil.millisecondToTime(now);
     }
@@ -983,14 +1046,15 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     private class ScholarSpiderRunnable implements Runnable {
 
         ScholarTemp scholar;
-
-        public ScholarSpiderRunnable(ScholarTemp scholar) {
+        String name;
+        public ScholarSpiderRunnable(ScholarTemp scholar,String name) {
             this.scholar = scholar;
+            this.name = name;
         }
 
         @Override
         public void run() {
-            Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader()).addUrl(scholar.getWebsite()).run();
+            Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite())),name).setDownloader(new HttpsClientDownloader(name)).addUrl(scholar.getWebsite()).run();
             //Spider.create(new ScholarDetailSpider(scholar, "GBK")).addUrl(scholar.getWebsite()).run();
         }
     }

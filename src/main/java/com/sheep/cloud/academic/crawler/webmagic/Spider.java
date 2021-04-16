@@ -22,6 +22,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.sheep.cloud.academic.crawler.util.LogSaver;
+import com.sheep.cloud.academic.crawler.util.StatuMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
@@ -65,19 +66,20 @@ public class Spider implements Runnable, Task {
     private final AtomicLong pageCount;
     private Date startTime;
     private int emptySleepTime;
+    private String name;
+//    LogSaver logSaver = LogSaver.getInstance();
 
-    LogSaver logSaver = LogSaver.getInstance();
-
-    public static com.sheep.cloud.academic.crawler.webmagic.Spider create(PageProcessor pageProcessor) {
-        return new com.sheep.cloud.academic.crawler.webmagic.Spider(pageProcessor);
+    public static com.sheep.cloud.academic.crawler.webmagic.Spider create(PageProcessor pageProcessor,String name) {
+        return new com.sheep.cloud.academic.crawler.webmagic.Spider(pageProcessor,name);
     }
 
-    public Spider(PageProcessor pageProcessor) {
+    public Spider(PageProcessor pageProcessor,String name) {
         this.newUrlCondition = this.newUrlLock.newCondition();
         this.pageCount = new AtomicLong(0L);
         this.emptySleepTime = 30000;
         this.pageProcessor = pageProcessor;
         this.site = pageProcessor.getSite();
+        this.name = name;
     }
 
     public com.sheep.cloud.academic.crawler.webmagic.Spider startUrls(List<String> startUrls) {
@@ -320,7 +322,8 @@ public class Spider implements Runnable, Task {
             }
         } else {
             this.logger.info("page status code error, page {} , code: {}", request.getUrl(), page.getStatusCode());
-            logSaver.addErr(String.format("page status code error, page %s , code: %d", request.getUrl(), page.getStatusCode()));
+            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("page status code error, page %s , code: %d", request.getUrl(), page.getStatusCode()));
+//            logSaver.addErr(String.format("page status code error, page %s , code: %d", request.getUrl(), page.getStatusCode()));
         }
 
         this.sleep(this.site.getSleepTime());

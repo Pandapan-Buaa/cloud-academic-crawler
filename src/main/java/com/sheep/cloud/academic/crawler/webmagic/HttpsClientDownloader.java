@@ -1,6 +1,7 @@
 package com.sheep.cloud.academic.crawler.webmagic;
 
 import com.sheep.cloud.academic.crawler.util.LogSaver;
+import com.sheep.cloud.academic.crawler.util.StatuMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -44,7 +45,12 @@ public class HttpsClientDownloader extends AbstractDownloader {
 
     private boolean responseHeader = true;
 
-    LogSaver logSaver = LogSaver.getInstance();
+//    LogSaver logSaver = LogSaver.getInstance();
+    private String name;
+    public HttpsClientDownloader(){}
+    public HttpsClientDownloader(String name){
+        this.name = name;
+    }
 
     public void setHttpUriRequestConverter(HttpUriRequestConverter httpUriRequestConverter) {
         this.httpUriRequestConverter = httpUriRequestConverter;
@@ -90,7 +96,8 @@ public class HttpsClientDownloader extends AbstractDownloader {
             return page;
         } catch (IOException e) {
             logger.warn("download page {} error", request.getUrl(), e);
-            logSaver.addErr(String.format("download page %s error",  request.getUrl()));
+            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("download page %s error",  request.getUrl()));
+//            logSaver.addErr(String.format("download page %s error",  request.getUrl()));
             onError(request);
             return page;
         } finally {

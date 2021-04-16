@@ -3,7 +3,6 @@ package com.sheep.cloud.academic.crawler.runnable;
 import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
-import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.core.entity.AbstractRunnable;
 import com.sheep.cloud.core.util.DateUtil;
 import com.sheep.cloud.core.util.StringUtil;
