@@ -388,7 +388,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             configures.add(configure);
         }
         configureTemps.clear();
-
+        MongodbUtil.delete(param,ScholarConfigureTemp.class);
         /*List<ScholarConfigure> configures = new ArrayList<>();
         ScholarConfigure configure1 = new ScholarConfigure("汕头大学", "商学院", "企业管理系", "教授", "http://swxy.tust.edu.cn/nr.aspx?id=831", "//*[@id='lm']");
         configures.add(configure1);*/
@@ -553,9 +553,11 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
         }
         //
+        statu.detailStatus = 50;
         while(executor.getQueue().size() > 0){
 //            detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
-            statu.detailStatus = (long)(100 - executor.getQueue().size()/(double)statu.detailSize*100);
+//            statu.detailStatus = (long)(100 - executor.getQueue().size()/(double)statu.detailSize*100);
+            continue;
         }
         try {
             resultString = mapper.writeValueAsString(result);
@@ -639,13 +641,17 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 if (StringUtil.isEmpty(scholar.getContent()) || "null".equals(scholar.getContent())) {
                     continue;
                 }
+//                statu.set.add(scholar.getOrganizationName() + " " + scholar.getCollegeName());
                 executor.execute(new ScholarTempRunnable(scholar));
             }
 
         }
+        statu.detailMatchStatus = 50;
         while(executor.getQueue().size() > 0){
-            statu.detailMatchStatus  = (long)(100 - executor.getQueue().size()/(double) statu.detailMatchSize*100);
-//            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
+//            statu.detailMatchStatus  = (long)(100 - executor.getQueue().size()/(double) statu.detailMatchSize*100);
+////            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
+//            System.out.println("test " + executor.getQueue().size());
+            continue;
         }
         if(refresh == false){
             scholars = new ArrayList<ScholarTemp>();
@@ -654,9 +660,17 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 param = new QueryParam();
                 String[] split =  s.split(" ");
                 param.addTerm(Term.build("organizationName", split[0]));
-                param.addTerm(Term.build("collegeName", split[1]));
+                try{
+                    param.addTerm(Term.build("collegeName", split[1]));
+                }
+                catch (Exception e){
+                    ;
+                }
+
+
                 scholars.addAll( MongodbUtil.select(param, ScholarTemp.class));
             }
+            log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
             statu.detailMatchSize = scholars.size();
 //            System.out.println("*****" + scholars.size());
 //           detailMatchSize  = scholars.size();
@@ -666,7 +680,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 //            detailMatchSize  = scholars.size();
             scholars = MongodbUtil.select(param, ScholarTemp.class);
         }
-
         count = 0;
         Map<Integer,String> result = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
@@ -782,10 +795,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         statu.antiCrawlerSize = result.size();
 //        antiCrawlerSize = result.size();
-        while(executor.getQueue().size() > 0){
-            statu.antiCrawlerStatus = (long)(100-executor.getQueue().size()/(double)statu.antiCrawlerSize*100);
-//            antiCrawlerStatus = (int)(100 - executor.getQueue().size()/(double)antiCrawlerSize*100);
-        }
 
 //        antiCrawlerStatus  = 100;
         try {
