@@ -723,6 +723,28 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         return resultString;
     }
 
+    @ApiOperation(value = "错误日志")
+    @GetMapping("/errorlog")
+    public String errorlog(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        Map<Integer, String> map = new HashMap<>();
+        int count = 1;
+        for(String s : statu.errlog){
+            map.put(count++,s);
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        try {
+            resultString = mapper.writeValueAsString(map);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return resultString;
+    }
+
 
     @Autowired
     private SensitiveFilter sensitiveFilter;

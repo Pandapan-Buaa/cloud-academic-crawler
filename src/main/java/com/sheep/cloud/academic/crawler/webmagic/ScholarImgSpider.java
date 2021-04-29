@@ -21,6 +21,7 @@ import static com.sheep.cloud.academic.crawler.controller.ScholarTempController.
 import static com.sheep.cloud.academic.crawler.webmagic.ScholarSpider.PATTERN;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 
@@ -98,6 +99,12 @@ public class ScholarImgSpider implements PageProcessor {
 //            logSaver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
             StatuMap.getInstance().getStatumap().get(namehash).saver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
         }
+        if(scholars.size() == 0){
+            log.info(String.format("%s %s %s加载html未检测到学者信息,请手动添加",organizationName, collegeName,configure.getWebsite()));
+            StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
+            StatuMap.getInstance().getStatumap().get(namehash).errlog.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
+        }
+
         log.info("ScholarSpider ================== organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }
 

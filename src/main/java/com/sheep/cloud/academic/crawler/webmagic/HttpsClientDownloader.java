@@ -24,6 +24,7 @@ import us.codecraft.webmagic.utils.HttpClientUtils;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -96,7 +97,9 @@ public class HttpsClientDownloader extends AbstractDownloader {
             return page;
         } catch (IOException e) {
             logger.warn("download page {} error", request.getUrl(), e);
-            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("download page %s error",  request.getUrl()));
+            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("%s download page %s error", new Date().toString(), request.getUrl()));
+            StatuMap.getInstance().getStatumap().get(name).errlog.add(String.format("%s download page %s error",new Date().toString(),  request.getUrl()));
+//
 //            logSaver.addErr(String.format("download page %s error",  request.getUrl()));
             onError(request);
             return page;

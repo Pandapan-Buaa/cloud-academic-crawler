@@ -6,6 +6,7 @@ import java.util.*;
 public class InnerStatu{
     public List<String> saver;
     public List<String> errsaver;
+    public List<String> errlog;
     public Set<String> set;
     public long antiCrawlerStatus = 0;
     public long antiCrawlerSize = 0;
@@ -22,6 +23,7 @@ public class InnerStatu{
     public InnerStatu(){
         saver = Collections.synchronizedList(new ArrayList<>());
         errsaver = Collections.synchronizedList(new ArrayList<>());
+        errlog = Collections.synchronizedList(new ArrayList<>());
         set = new HashSet<>();
     }
     public void logclear(){

@@ -322,7 +322,8 @@ public class Spider implements Runnable, Task {
             }
         } else {
             this.logger.info("page status code error, page {} , code: {}", request.getUrl(), page.getStatusCode());
-            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("page status code error, page %s , code: %d", request.getUrl(), page.getStatusCode()));
+            StatuMap.getInstance().getStatumap().get(name).errsaver.add(String.format("%s page status code error, page %s , code: %d",new Date().toString(), request.getUrl(), page.getStatusCode()));
+            StatuMap.getInstance().getStatumap().get(name).errlog.add(String.format("%s page status code error, page %s , code: %d",new Date().toString(), request.getUrl(), page.getStatusCode()));
 //            logSaver.addErr(String.format("page status code error, page %s , code: %d", request.getUrl(), page.getStatusCode()));
         }
 

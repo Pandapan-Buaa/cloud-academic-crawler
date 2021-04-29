@@ -21,6 +21,7 @@ import us.codecraft.webmagic.selector.Html;
 import us.codecraft.webmagic.selector.Selectable;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -116,9 +117,9 @@ public class ScholarSpider implements PageProcessor {
                 log.info("=============== Saving process Finished. ===============");
             }
             if(scholars.size() == 0){
-                log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
-                StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
-//                logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+                log.info(String.format("%s %s %s加载html未检测到学者信息,请手动添加",organizationName, collegeName,configure.getWebsite()));
+                StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
+                StatuMap.getInstance().getStatumap().get(namehash).errlog.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
             }
             log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
 
@@ -262,9 +263,10 @@ public class ScholarSpider implements PageProcessor {
             StatuMap.getInstance().getStatumap().get(namehash).saver.add(scholar.getOrganizationName()+" "+scholar.getCollegeName()+" "+scholar.getName());
         }
         if(scholars.size() == 0){
-            log.info(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+            log.info(String.format("%s %s %s加载html未检测到学者信息,请手动添加",organizationName, collegeName,configure.getWebsite()));
 //            logSaver.addErr(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
-            StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s或为动态网页，加载html未检测到学者信息",configure.getWebsite()));
+            StatuMap.getInstance().getStatumap().get(namehash).errsaver.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
+            StatuMap.getInstance().getStatumap().get(namehash).errlog.add(String.format("%s %s %s %s加载html未检测到学者信息,请手动添加",new Date().toString(),organizationName, collegeName,configure.getWebsite()));
         }
         log.info("ScholarSpider ======================= organizationName:{}, collegeName:{}, deptName:{}, nodes:{}, scholars:{}", organizationName, collegeName, dept, nodes.size(), scholars.size());
     }
