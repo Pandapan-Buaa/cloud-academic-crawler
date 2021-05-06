@@ -157,7 +157,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         String path = dir + "\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\data";
          */
         String path = "D:\\work\\workspace\\python\\buaaac\\vue-admin-template\\dist\\static\\media\\xpath";
-
+//        String path = "/home/pccj/buaaac/vue-admin-template/dist/static/media/xpath";
         File file = new File(path);
         String[] fileList = file.list();
         if (fileList == null || fileList.length == 0) {
