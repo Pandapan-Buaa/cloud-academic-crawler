@@ -1,16 +1,14 @@
 package com.sheep.cloud.academic.crawler.controller;
 
 import cn.hutool.poi.excel.ExcelWriter;
+import com.alibaba.fastjson.JSONPath;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.sheep.cloud.academic.crawler.entity.Scholar;
-import com.sheep.cloud.academic.crawler.entity.ScholarConfigure;
-import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
-import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
+import com.sheep.cloud.academic.crawler.entity.*;
 import com.sheep.cloud.academic.crawler.runnable.ScholarTempRunnable;
 import com.sheep.cloud.academic.crawler.service.ScholarConfigureService;
 import com.sheep.cloud.academic.crawler.util.*;
@@ -157,7 +155,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         String path = dir + "\\src\\main\\java\\com\\sheep\\cloud\\academic\\crawler\\data";
          */
         String path = "D:\\work\\workspace\\python\\buaaac\\vue-admin-template\\dist\\static\\media\\xpath";
-//        String path = "/home/pccj/buaaac/vue-admin-template/dist/static/media/xpath";
+//        String path = "/home/xzpc/buaaac/vue-admin-template/dist/static/media/xpath";
         File file = new File(path);
         String[] fileList = file.list();
         if (fileList == null || fileList.length == 0) {
@@ -436,6 +434,15 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         return resultString;
 //        return "success";
     }
+    @ApiOperation(value = "测试")
+    @GetMapping("/testId")
+    public String testId() {
+        Update update = new Update();
+        update.set("scholarId", "12345678");
+        MongodbUtil.patch("645bfcebb7274352acb4e6f9041b3e2f", update, ScholarTemp.class);
+        return "test";
+    }
+
 
     @ApiOperation(value = "用于处理后续发现的一些问题")
     @GetMapping("/reHandle")
@@ -553,11 +560,14 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
         }
         //
-        statu.detailStatus = 50;
+//        statu.detailStatus = 50;
         while(executor.getQueue().size() > 0){
 //            detailStatus = (int)(100 - executor.getQueue().size()/(double)detailSize*100);
+            if(statu.detailStatus < 90){
+                statu.detailStatus++;
+            }
 //            statu.detailStatus = (long)(100 - executor.getQueue().size()/(double)statu.detailSize*100);
-            continue;
+//            continue;
         }
         try {
             resultString = mapper.writeValueAsString(result);
@@ -646,12 +656,14 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
             }
 
         }
-        statu.detailMatchStatus = 50;
+//        statu.detailMatchStatus = 50;
         while(executor.getQueue().size() > 0){
 //            statu.detailMatchStatus  = (long)(100 - executor.getQueue().size()/(double) statu.detailMatchSize*100);
 ////            detailMatchStatus = (int)(100 - executor.getQueue().size()/(double)detailMatchSize*100);
 //            System.out.println("test " + executor.getQueue().size());
-            continue;
+            if(statu.detailMatchStatus < 90){
+                statu.detailMatchStatus ++;
+            }
         }
         if(refresh == false){
             scholars = new ArrayList<ScholarTemp>();
@@ -685,9 +697,53 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         ObjectMapper mapper = new ObjectMapper();
         String resultString = "";
 
+        String getUrl="http://47.92.240.36/academic-apply/apply/scholar/getScholarByInfo";
+        List<ScholarMultiId> multilist = new ArrayList<>();
         for (ScholarTemp scholar : scholars) {
             count++;
+
+            if(StringUtil.isEmpty(scholar.getScholarId()) || "null".equals(scholar.getScholarId())){
+                //            httpget设置
+                Map<String,Object> map=new HashMap<String,Object>();
+                map.put("name", HttpRequest.encodeParam(scholar.getName()));
+                String orgName = scholar.getOrganizationName();
+                if(!(StringUtil.isEmpty(orgName) || "null".equals(orgName))){
+                    map.put("orgName",HttpRequest.encodeParam(orgName));
+
+                }
+                String department =  scholar.getCollegeName();
+                if(!(StringUtil.isEmpty(department) || "null".equals(department))){
+                    map.put("department", HttpRequest.encodeParam(department));
+                }
+                log.info(scholar.getName() + " " + orgName + " "+ department );
+//
+                String json = HttpRequest.sendGet(getUrl, map,"utf-8");
+                int size = (int) JSONPath.read(json,"$.data.size()");
+                if(size > 1){
+                    StringBuffer ids = new StringBuffer();
+                    for(int i = 0 ; i < size ; i ++){
+//                    System.out.println(JSONPath.read(json,String.format("$.data[%d]",i)));
+                        ids.append(JSONPath.read(json,String.format("$.data[%d].id",i)).toString());
+                        ids.append(" ");
+//                    System.out.println(JSONPath.read(json,String.format("$.data[%d].id",i)));
+                    }
+                    multilist.add(new ScholarMultiId(scholar,json,ids.toString()));
+//                存信息到新数据库等待处理
+                }else if(size == 1){
+                    System.out.println(JSONPath.read(json,"$.data[0].id") + " " + scholar.getName() + " " + orgName + " "+ department);
+                    String scholarId = JSONPath.read(json,"$.data[0].id").toString();
+                    scholar.setScholarId(scholarId);
+                    Update update = new Update();
+                    update.set("scholarId", scholarId);
+                    MongodbUtil.patch(scholar.getId(), update, ScholarTemp.class);
+                }
+            }
+            statu.scholars.add(scholar);
             result.put(count, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName() + " " + scholar.getTitle() + " " + scholar.getEmail() + " " + scholar.getPhone() + " " + scholar.getId() + " " + scholar.getScholarId());
+
+        }
+        if(multilist.size() != 0){
+            MongodbUtil.save(multilist);
         }
 
         try {
@@ -699,6 +755,63 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 //        detailMatchStatus = 100;
         statu.detailMatchStatus = 100;
         return resultString;
+    }
+
+    @ApiOperation(value = "确认入库")
+    @GetMapping("/saveTozhitu")
+    public String saveTozhitu(@RequestParam(value = "name", required = true) String name) {
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        int count = statu.scholars.size();
+//确保与库中一致
+        for(ScholarTemp scholar : statu.scholars){
+            QueryParam param = new QueryParam();
+            param.addTerm(Term.build("id", scholar.getId()));
+            List<ScholarTemp> temp = MongodbUtil.select(param, ScholarTemp.class);
+//            System.out.println(temp.size());
+            for(ScholarTemp temps : temp){
+//                System.out.println(temps.getId() + temps.getName());
+                scholar.setName(temps.getName());
+                scholar.setOrganizationName(temps.getOrganizationName());
+                scholar.setCollegeName(temps.getCollegeName());
+                scholar.setTitle(temps.getTitle());
+                scholar.setEmail(temps.getEmail());
+                scholar.setPhone(temps.getPhone());
+            }
+        }
+
+
+
+
+        for(ScholarTemp scholar : statu.scholars){
+            String putUrl = "http://47.92.240.36/academic-apply/apply/scholar/updateScholarBasic";
+            Map<String,Object> map=new HashMap<String,Object>();
+
+            map.put("id", scholar.getScholarId());
+            map.put("name",HttpRequest.encodeParam(scholar.getName()));
+            map.put("orgName",HttpRequest.encodeParam(scholar.getOrganizationName()));
+
+            if(!(StringUtil.isEmpty(scholar.getCollegeName()) || "null".equals(scholar.getCollegeName()))){
+                map.put("department",HttpRequest.encodeParam(scholar.getCollegeName()));
+            }
+            if(!(StringUtil.isEmpty(scholar.getEmail()) || "null".equals(scholar.getEmail()))){
+                map.put("email",scholar.getEmail());
+            }
+            if(!(StringUtil.isEmpty(scholar.getTitle()) || "null".equals(scholar.getTitle()))){
+                map.put("title",HttpRequest.encodeParam(scholar.getTitle()));
+            }
+            if(!(StringUtil.isEmpty(scholar.getPhone()) || "null".equals(scholar.getPhone()))){
+                map.put("phone",scholar.getPhone());
+            }
+            if(!(StringUtil.isEmpty(scholar.getWebsite()) || "null".equals(scholar.getWebsite()))){
+                map.put("url",scholar.getWebsite());
+            }
+            String json = HttpRequest.sendPut(putUrl, map,"utf-8");
+        }
+        statu.scholars.clear();
+        return ""+count;
     }
 
     @ApiOperation(value = "错误信息接口")
@@ -813,6 +926,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 result.put(count++, scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
 //                log.info("重新爬取" + scholar.getOrganizationName() + " " +scholar.getCollegeName() + " " + scholar.getName());
 //               Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite()))).setDownloader(new HttpsClientDownloader(name)).addUrl(scholar.getWebsite()).run();
+                Spider.create(new ScholarDetailSpider(scholar, CrawlerUtil.detectCharset(scholar.getWebsite())),name).setDownloader(new HttpsClientDownloader(name)).addUrl(scholar.getWebsite()).run();
             }
         }
         statu.antiCrawlerSize = result.size();

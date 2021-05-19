@@ -1,6 +1,5 @@
 package com.sheep.cloud.academic.crawler.webmagic;
 
-import com.sheep.cloud.academic.crawler.util.LogSaver;
 import com.sheep.cloud.academic.crawler.util.StatuMap;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;

@@ -56,14 +56,17 @@ public class ScholarTempRunnable implements Runnable {
             if ((StringUtil.isEmpty(scholar.getTitle()) || "null".equals(scholar.getTitle())) && StringUtil.isNotEmpty(title)) {
                 flag = true;
                 update.set("title", title);
+                scholar.setTitle(title);
             }
             if ((StringUtil.isEmpty(scholar.getEmail()) || "null".equals(scholar.getEmail())) && StringUtil.isNotEmpty(email)) {
                 flag = true;
                 update.set("email", email);
+                scholar.setEmail(email);
             }
             if ((StringUtil.isEmpty(scholar.getPhone()) || "null".equals(scholar.getPhone())) && StringUtil.isNotEmpty(phone)) {
                 flag = true;
                 update.set("phone", phone);
+                scholar.setPhone(phone);
             }
 
             if (flag) {

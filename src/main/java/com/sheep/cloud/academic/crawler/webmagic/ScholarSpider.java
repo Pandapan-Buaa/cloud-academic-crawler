@@ -4,7 +4,7 @@ import com.sheep.cloud.academic.crawler.entity.ScholarConfigure;
 import com.sheep.cloud.academic.crawler.entity.ScholarConfigureTemp;
 import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
 import com.sheep.cloud.academic.crawler.util.CrawlerUtil;
-import com.sheep.cloud.academic.crawler.util.LogSaver;
+
 import com.sheep.cloud.academic.crawler.util.StatuMap;
 import com.sheep.cloud.core.util.BeanCopierUtil;
 import com.sheep.cloud.core.util.CollectionUtil;

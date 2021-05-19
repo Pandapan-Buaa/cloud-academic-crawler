@@ -1,5 +1,7 @@
 package com.sheep.cloud.academic.crawler.util;
 
+import com.sheep.cloud.academic.crawler.entity.ScholarTemp;
+
 import java.util.*;
 
 
@@ -8,6 +10,7 @@ public class InnerStatu{
     public List<String> errsaver;
     public List<String> errlog;
     public Set<String> set;
+    public List<ScholarTemp> scholars;
     public long antiCrawlerStatus = 0;
     public long antiCrawlerSize = 0;
     public long detailMatchStatus = 0;
@@ -25,6 +28,7 @@ public class InnerStatu{
         errsaver = Collections.synchronizedList(new ArrayList<>());
         errlog = Collections.synchronizedList(new ArrayList<>());
         set = new HashSet<>();
+        scholars = Collections.synchronizedList(new ArrayList<>());
     }
     public void logclear(){
         saver.clear();
