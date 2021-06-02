@@ -41,6 +41,9 @@ public class ScholarConfigure extends BaseEntity {
     @ApiModelProperty(name = "是否已抓取")
     private boolean handled;
 
+    @ApiModelProperty(name = "录入人")
+    private String writeBy;
+
     public ScholarConfigure(String organizationName, String collegeName, String departmentName, String title, String website, String xpath) {
         this.organizationName = organizationName;
         this.collegeName = collegeName;

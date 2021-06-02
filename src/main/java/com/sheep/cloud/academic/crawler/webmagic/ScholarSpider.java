@@ -106,7 +106,7 @@ public class ScholarSpider implements PageProcessor {
                     continue;
                 }
                 ORG_NAME_URLS.add(code);
-                scholars.add(new ScholarTemp(organizationName, collegeName, dept, name, title, ""));
+                scholars.add(new ScholarTemp(organizationName, collegeName, dept, name, title, "", namehash));
             }
             if (CollectionUtil.isEmpty(scholars)) {
                 ScholarConfigureTemp temp = BeanCopierUtil.copy(configure, ScholarConfigureTemp.class);
@@ -247,7 +247,7 @@ public class ScholarSpider implements PageProcessor {
                 continue;
             }
             ORG_NAME_URLS.add(code);
-            scholars.add(new ScholarTemp(organizationName, collegeName, dept, name, title, url));
+            scholars.add(new ScholarTemp(organizationName, collegeName, dept, name, title, url, namehash));
         }
         if (CollectionUtil.isEmpty(scholars)) {
             ScholarConfigureTemp temp = BeanCopierUtil.copy(configure, ScholarConfigureTemp.class);

@@ -15,6 +15,7 @@ spring:
       #url: jdbc:mysql://192.168.0.90:3306/cloud_academic?useUnicode=true&serverTimezone=UTC&useSSL=false
       username: root
       #password: root
+      #zhong123
       password: zhong123
   redis:
       url: redis://user:123456@172.21.2.236:6379

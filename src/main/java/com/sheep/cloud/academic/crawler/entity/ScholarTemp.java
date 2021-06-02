@@ -73,6 +73,9 @@ public class ScholarTemp extends BaseEntity {
     @ApiModelProperty(name = "是否已更新邮件、电话信息")
     private boolean match;
 
+    @ApiModelProperty(name = "录入人")
+    private String writeBy;
+
     public ScholarTemp(String organizationName, String collegeName, String departmentName, String name, String title, String website) {
         this.organizationName = organizationName;
         this.collegeName = collegeName;
@@ -82,6 +85,18 @@ public class ScholarTemp extends BaseEntity {
         this.website = website;
         this.mainPage = false;
         this.match = false;
+    }
+
+    public ScholarTemp(String organizationName, String collegeName, String departmentName, String name, String title, String website, String writeBy) {
+        this.organizationName = organizationName;
+        this.collegeName = collegeName;
+        this.departmentName = departmentName;
+        this.name = name;
+        this.title = title;
+        this.website = website;
+        this.mainPage = false;
+        this.match = false;
+        this.writeBy = writeBy;
     }
 
 }

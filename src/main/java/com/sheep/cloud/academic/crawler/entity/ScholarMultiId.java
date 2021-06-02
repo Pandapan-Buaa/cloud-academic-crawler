@@ -39,7 +39,10 @@ public class ScholarMultiId  extends BaseEntity {
     @ApiModelProperty(name = "ids")
     private String ids;
 
-    public ScholarMultiId(ScholarTemp scholar,String json,String ids) {
+    @ApiModelProperty(name = "录入人")
+    private String writeBy;
+
+    public ScholarMultiId(ScholarTemp scholar,String json,String ids,String writeBy) {
         this.id = scholar.getId();
         this.organizationName = scholar.getOrganizationName();
         this.collegeName = scholar.getCollegeName();
@@ -49,5 +52,6 @@ public class ScholarMultiId  extends BaseEntity {
         this.name = scholar.getName();
         this.json = json;
         this.ids = ids;
+        this.writeBy = writeBy;
     }
 }

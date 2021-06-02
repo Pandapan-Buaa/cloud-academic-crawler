@@ -73,6 +73,7 @@ public class ScholarImgSpider implements PageProcessor {
                     continue;
                 }
                 ScholarTemp scholar = parseNode(node, organizationName, collegeName, dept, title, nodeStr);
+
                 if (null != scholar) {
                     if (PATTERN.matcher(scholar.getName()).find()) {
                         continue;
@@ -84,6 +85,7 @@ public class ScholarImgSpider implements PageProcessor {
                         continue;
                     }
                     ORG_NAME_URLS.add(code);
+                    scholar.setWriteBy(namehash);
                     scholars.add(scholar);
                 }
             }

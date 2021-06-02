@@ -63,55 +63,6 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(12, 12, 0, TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(), threadFactory);
 
     public String parseRequest(String[] args) {
-//        if (args[0].equals("load-config")) {
-//            return loadConfig();
-//        } else if (args[0].equals("crawler") || args[0].equals("imgCrawler") || args[0].equals("detail") || args[0].equals("detail-match")) {
-//            String organizationName = args[1];
-//            String collegeName = args[2];
-//            QueryParam param = new QueryParam();
-//            if (!organizationName.equals("all")) {
-//                param.addTerm(Term.build("organizationName", organizationName));
-//            }
-//            if (!collegeName.equals("all")) {
-//                param.addTerm(Term.build("collegeName", collegeName));
-//            }
-//            switch (args[0]) {
-//                case "crawler":
-//                    return crawler(param);
-//                case "imgCrawler":
-//                    return imgCrawler(param);
-//                case "detail":
-//                    if (!"null".equals(args[3])) {
-//                        if (args[3].equals("true")) {
-//                            return detail(param, true);
-//                        } else {
-//                            if (organizationName.equals("all") && collegeName.equals("all")) {
-//                                param.addTerm(Term.build("mainPage", false));
-//                            }
-//                            return detail(param, false);
-//                        }
-//                    } else {
-//                        return detail(param, false);
-//                    }
-//                case "detail-match":
-//                    if (!"null".equals(args[3])) {
-//                        if (args[3].equals("true")) {
-//                            return detail(param, true);
-//                        } else {
-//                            if (organizationName.equals("all") && collegeName.equals("all")) {
-//                                param.addTerm(Term.build("match", false));
-//                            }
-//                            return detailMatch(param, false);
-//                        }
-//                    } else {
-//                        return detailMatch(param, false);
-//                    }
-//                default:
-//                    return "Invalid Request!";
-//            }
-//        } else {
-//            return "Invalid Request!";
-//        }
         return null;
     }
     ConcurrentHashMap<String, InnerStatu> statumap = StatuMap.getInstance().getStatumap();
@@ -195,6 +146,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                     configure.setTitle(arrList.get(3));
                     configure.setWebsite(arrList.get(4));
                     configure.setXpath(arrList.get(5));
+                    configure.setWriteBy(name);
                     ScholarConfigure temp = BeanCopierUtil.copy(configure, ScholarConfigure.class);
                     MongodbUtil.save(temp);
                     statu.set.add(arrList.get(0) + " " + arrList.get(1));
@@ -264,6 +216,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if(!refresh){
             param.addTerm(Term.build("handled", false));
         }
+        param.addTerm(Term.build("writeBy", name));
         // 读取已经爬取的数据，防止再次抓取重复
         /*log.info("=============== Start reading finished scholars from scholar_temp! ===============");
         List<ScholarTemp> temps = MongodbUtil.select(param, ScholarTemp.class);
@@ -351,6 +304,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         }
         return resultString;
     }
+
     @ApiOperation(value = "抓取链接在图片上的学者")
     @GetMapping("/imgCrawler")
     public String imgCrawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
@@ -375,6 +329,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (!collegeName.equals("all")) {
             param.addTerm(Term.build("collegeName", collegeName));
         }
+        param.addTerm(Term.build("writeBy", name));
 
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarConfigureTemp> configureTemps = MongodbUtil.select(param, ScholarConfigureTemp.class);
@@ -437,9 +392,9 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
     @ApiOperation(value = "测试")
     @GetMapping("/testId")
     public String testId() {
-        Update update = new Update();
-        update.set("scholarId", "12345678");
-        MongodbUtil.patch("645bfcebb7274352acb4e6f9041b3e2f", update, ScholarTemp.class);
+//        Update update = new Update();
+//        update.set("scholarId", "12345678");
+//        MongodbUtil.patch("645bfcebb7274352acb4e6f9041b3e2f", update, ScholarTemp.class);
         return "test";
     }
 
@@ -524,6 +479,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if(refresh == false){
             param.addTerm(Term.build("mainPage", false));
         }
+        param.addTerm(Term.build("writeBy", name));
         log.info("=============== Start loading scholars from Database! ===============");
         if(!refresh){
             param.addTerm(Term.build("content", TermTypeEnum.NULL, null));
@@ -628,6 +584,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if(refresh == false){
             param.addTerm(Term.build("match", false));
         }
+        param.addTerm(Term.build("writeBy", name));
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
@@ -678,6 +635,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                 catch (Exception e){
                     ;
                 }
+                param.addTerm(Term.build("writeBy", name));
 
 
                 scholars.addAll( MongodbUtil.select(param, ScholarTemp.class));
@@ -727,7 +685,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
                         ids.append(" ");
 //                    System.out.println(JSONPath.read(json,String.format("$.data[%d].id",i)));
                     }
-                    multilist.add(new ScholarMultiId(scholar,json,ids.toString()));
+                    multilist.add(new ScholarMultiId(scholar,json,ids.toString(),name));
 //                存信息到新数据库等待处理
                 }else if(size == 1){
                     System.out.println(JSONPath.read(json,"$.data[0].id") + " " + scholar.getName() + " " + orgName + " "+ department);
@@ -906,6 +864,7 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         if (!collegeName.equals("all")) {
             param.addTerm(Term.build("collegeName", collegeName));
         }
+        param.addTerm(Term.build("writeBy", name));
         log.info("=============== Start loading scholars from Database! ===============");
         List<ScholarTemp> scholars = MongodbUtil.select(param, ScholarTemp.class);
         log.info("=============== Loading scholars succeed! Total count: " + scholars.size() + ". ===============");
