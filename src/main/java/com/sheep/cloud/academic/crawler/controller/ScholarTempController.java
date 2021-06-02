@@ -13,10 +13,8 @@ import com.sheep.cloud.academic.crawler.runnable.ScholarTempRunnable;
 import com.sheep.cloud.academic.crawler.service.ScholarConfigureService;
 import com.sheep.cloud.academic.crawler.util.*;
 import com.sheep.cloud.academic.crawler.vo.ScholarTempVO;
-import com.sheep.cloud.academic.crawler.webmagic.HttpsClientDownloader;
-import com.sheep.cloud.academic.crawler.webmagic.ScholarDetailSpider;
-import com.sheep.cloud.academic.crawler.webmagic.ScholarImgSpider;
-import com.sheep.cloud.academic.crawler.webmagic.ScholarSpider;
+import com.sheep.cloud.academic.crawler.webdriver.MyPhantomJsDriver;
+import com.sheep.cloud.academic.crawler.webmagic.*;
 import com.sheep.cloud.core.entity.QueryParam;
 import com.sheep.cloud.core.enums.Term;
 import com.sheep.cloud.core.enums.TermTypeEnum;
@@ -29,13 +27,13 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.Wait;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 //import us.codecraft.webmagic.Spider;
-import com.sheep.cloud.academic.crawler.webmagic.Spider;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.util.*;
@@ -162,6 +160,121 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
         return DateUtil.millisecondToTime(now);
     }
 
+    @ApiOperation(value = "新增抓取学者接口")
+    @GetMapping("/crawler")
+    public String dynamicCrawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+                                 @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+                                 @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+                                 @RequestParam(value = "name", required = true) String name) {
+
+        log.info("=============== Start reading finished scholars from database! ===============");
+        List<ScholarTemp> temps = MongodbUtil.select(new QueryParam(), ScholarTemp.class);
+        log.info("=============== Reading process finished! Total num: " + temps.size() + ". ===============");
+        if (CollectionUtil.isNotEmpty(temps)) {
+            for (ScholarTemp temp : temps) {
+                ORG_NAME_URLS.add(temp.getOrganizationName() + "|" + temp.getCollegeName() + "|" + temp.getName());
+            }
+        }
+        temps.clear();
+        //去重步骤
+        long now = System.currentTimeMillis();
+        if(!statumap.containsKey(name)){
+            statumap.put(name, new InnerStatu());
+        }
+        InnerStatu statu = statumap.get(name);
+        statu.crawlerSize = 0 ;
+        statu.crawlerStatus = 0;
+        statu.logclear();
+        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName + " " + name);
+        QueryParam param = new QueryParam();
+        if (!organizationName.equals("all")) {
+            param.addTerm(Term.build("organizationName", organizationName));
+        }
+        if (!collegeName.equals("all")) {
+            param.addTerm(Term.build("collegeName", collegeName));
+        }
+        if(!refresh){
+            param.addTerm(Term.build("handled", false));
+        }
+        param.addTerm(Term.build("writeBy", name));
+
+        log.info("=============== Start loading configures from database! ===============");
+        List<ScholarConfigure> configures = MongodbUtil.select(param, ScholarConfigure.class);
+        log.info("=============== Loading configures finished! Total count: " + configures.size() + " ===============");
+
+        if (CollectionUtil.isEmpty(configures)) {
+            statu.crawlerStatus = 100;
+            return DateUtil.millisecondToTime(now);
+        }
+
+        int count = 0;
+        statu.crawlerSize = configures.size();
+        WebDriver driver = MyPhantomJsDriver.getPhantomJSDriver();
+        for (ScholarConfigure configure : configures) {
+            count++;
+            statu.crawlerStatus = (long)(count/(double)statu.crawlerSize*100) - 1;
+            log.info("=============== Python INFO: Detecting web charset ······ ===============");
+            String charset = CrawlerUtil.detectCharset(configure.getWebsite());
+            log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
+            new DynamicScholarSpider(configure, charset, driver, name).run();
+            if (count % 10 == 0) {
+                log.info("=============== Total count: " + configures.size() + ". ===============");
+                log.info("=============== Finished num: " + count + ". ===============");
+            }
+            Update update = new Update();
+            update.set("handled", true);
+            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
+        }
+
+        log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+//        return "finish!";
+
+
+        count = 0;
+        Map<Integer,String> result = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        String resultString = "";
+        for(String str : statu.saver){
+            result.put(count++,str);
+            log.info(str);
+        }
+        try {
+            resultString = mapper.writeValueAsString(result);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        statu.crawlerStatus = 100;
+        return resultString;
+    }
+
+    @GetMapping("/englishDynamicCrawler")
+    public String englishDynamicCrawler() {
+        log.info("=============== Start loading configures from Database! ===============");
+        List<ScholarConfigure> configures = MongodbUtil.select(new QueryParam(), ScholarConfigure.class);
+        log.info("=============== Loading configures finished! Total count: " + configures.size() + " ===============");
+
+        if (CollectionUtil.isEmpty(configures)) {
+            return "no data";
+        }
+
+        int count = 0;
+        WebDriver driver = MyPhantomJsDriver.getPhantomJSDriver();
+        for (ScholarConfigure configure : configures) {
+            count++;
+            log.info("=============== Python INFO: Detecting web charset ······ ===============");
+            String charset = CrawlerUtil.detectCharset(configure.getWebsite());
+            log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
+            us.codecraft.webmagic.Spider.create(new EnglishScholarSpider(configure, charset, driver)).addUrl(configure.getWebsite()).thread(1).run();
+            if (count % 10 == 0) {
+                log.info("=============== Total count: " + configures.size() + ". ===============");
+                log.info("=============== Finished num: " + count + ". ===============");
+            }
+        }
+
+        log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+        return "finish!";
+    }
+
 
 //    int crawlerStatus = 0;
 //    int crawlerSize = 0;
@@ -187,100 +300,101 @@ public class ScholarTempController extends BaseCrudController<ScholarTemp, Schol
 
 //    LogSaver logSaver = LogSaver.getInstance();
 
-    @ApiOperation(value = "根据指定高校院系规则 抓取学者")
-    @GetMapping("/crawler")
-    public String crawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
-                          @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
-                          @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
-                          @RequestParam(value = "name", required = true) String name) {
-        long now = System.currentTimeMillis();
-        if(!statumap.containsKey(name)){
-            statumap.put(name, new InnerStatu());
-        }
-        InnerStatu statu = statumap.get(name);
-        statu.crawlerSize = 0 ;
-        statu.crawlerStatus = 0;
-//        crawlerStatus = 0;
-//        crawlerSize = 0;
-//        logSaver.clean();
-        statu.logclear();
-        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName + " " + name);
-
-        QueryParam param = new QueryParam();
-        if (!organizationName.equals("all")) {
-            param.addTerm(Term.build("organizationName", organizationName));
-        }
-        if (!collegeName.equals("all")) {
-            param.addTerm(Term.build("collegeName", collegeName));
-        }
-        if(!refresh){
-            param.addTerm(Term.build("handled", false));
-        }
-        param.addTerm(Term.build("writeBy", name));
-        // 读取已经爬取的数据，防止再次抓取重复
-        /*log.info("=============== Start reading finished scholars from scholar_temp! ===============");
-        List<ScholarTemp> temps = MongodbUtil.select(param, ScholarTemp.class);
-        log.info("=============== Reading process finished! Total num: " + temps.size() + ". ===============");
-        if (CollectionUtil.isNotEmpty(temps)) {
-            for (ScholarTemp temp : temps) {
-                ORG_NAME_URLS.add(temp.getOrganizationName() + "|" + temp.getCollegeName() + "|" + temp.getName());
-            }
-        }
-        temps.clear();*/
-
-        // 读取抓取高校院系规则，抓取学者名称、个人主页、职称
-        log.info("=============== Start loading configures from Database! ===============");
-        List<ScholarConfigure> configures = MongodbUtil.select(param, ScholarConfigure.class);
-        log.info("=============== Loading configures finished! Total count: " + configures.size() + " ===============");
-        /*List<ScholarConfigure> configures = new ArrayList<>();
-        ScholarConfigure configure1 = new ScholarConfigure("西安科技大学", "理学院", "", "教授", "https://skxy.qhnu.edu.cn/xygk/szdw.htm", "//*[@id=\"vsb_content_1117_u91\"]");
-        configures.add(configure1);*/
-        if (CollectionUtil.isEmpty(configures)) {
-            statu.crawlerStatus = 100;
-//            crawlerStatus = 100;
-            return DateUtil.millisecondToTime(now);
-        }
-        int count = 0;
-        statu.crawlerSize = configures.size();
-//        crawlerSize = configures.size();
-
-        for (ScholarConfigure configure : configures) {
-            count++;
-            statu.crawlerStatus = (long)(count/(double)statu.crawlerSize*100) - 1;
-//            crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
-            log.info("=============== Python INFO: Detecting web charset ······ ===============");
-            String charset = CrawlerUtil.detectCharset(configure.getWebsite());
-            log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
-            Spider.create(new ScholarSpider(configure, charset,name),name).setDownloader(new HttpsClientDownloader(name)).addUrl(configure.getWebsite()).thread(1).run();
-
-            Update update = new Update();
-            update.set("handled", true);
-            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
-            if (count % 10 == 0) {
-                log.info("=============== Total count: " + configures.size() + ". ===============");
-                log.info("=============== Finished num: " + count + ". ===============");
-            }
-        }
-
-        log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
-
-        count = 0;
-        Map<Integer,String> result = new HashMap<>();
-        ObjectMapper mapper = new ObjectMapper();
-        String resultString = "";
-        for(String str : statu.saver){
-            result.put(count++,str);
-            log.info(str);
-        }
-        try {
-            resultString = mapper.writeValueAsString(result);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        statu.crawlerStatus = 100;
-//        crawlerStatus = 100;
-        return resultString;
-    }
+//    @ApiOperation(value = "根据指定高校院系规则 抓取学者")
+//    @GetMapping("/crawler1")
+//    public String crawler(@RequestParam(value = "organizationName", required = false,defaultValue="all") String organizationName,
+//                          @RequestParam(value = "collegeName", required = false,defaultValue="all") String collegeName,
+//                          @RequestParam(value = "refresh", required = false,defaultValue="false") boolean refresh,
+//                          @RequestParam(value = "name", required = true) String name) {
+//        long now = System.currentTimeMillis();
+//        if(!statumap.containsKey(name)){
+//            statumap.put(name, new InnerStatu());
+//        }
+//        InnerStatu statu = statumap.get(name);
+//        statu.crawlerSize = 0 ;
+//        statu.crawlerStatus = 0;
+////        crawlerStatus = 0;
+////        crawlerSize = 0;
+////        logSaver.clean();
+//        statu.logclear();
+//        log.info("/crawler " + refresh + " "  + organizationName + " " + collegeName + " " + name);
+//
+//        QueryParam param = new QueryParam();
+//        if (!organizationName.equals("all")) {
+//            param.addTerm(Term.build("organizationName", organizationName));
+//        }
+//        if (!collegeName.equals("all")) {
+//            param.addTerm(Term.build("collegeName", collegeName));
+//        }
+//        if(!refresh){
+//            param.addTerm(Term.build("handled", false));
+//        }
+//        param.addTerm(Term.build("writeBy", name));
+//        // 读取已经爬取的数据，防止再次抓取重复
+//        /*log.info("=============== Start reading finished scholars from scholar_temp! ===============");
+//        List<ScholarTemp> temps = MongodbUtil.select(param, ScholarTemp.class);
+//        log.info("=============== Reading process finished! Total num: " + temps.size() + ". ===============");
+//        if (CollectionUtil.isNotEmpty(temps)) {
+//            for (ScholarTemp temp : temps) {
+//                ORG_NAME_URLS.add(temp.getOrganizationName() + "|" + temp.getCollegeName() + "|" + temp.getName());
+//            }
+//        }
+//        temps.clear();*/
+//
+//        // 读取抓取高校院系规则，抓取学者名称、个人主页、职称
+//        log.info("=============== Start loading configures from Database! ===============");
+//        List<ScholarConfigure> configures = MongodbUtil.select(param, ScholarConfigure.class);
+//        log.info("=============== Loading configures finished! Total count: " + configures.size() + " ===============");
+//        /*List<ScholarConfigure> configures = new ArrayList<>();
+//        ScholarConfigure configure1 = new ScholarConfigure("西安科技大学", "理学院", "", "教授", "https://skxy.qhnu.edu.cn/xygk/szdw.htm", "//*[@id=\"vsb_content_1117_u91\"]");
+//        configures.add(configure1);*/
+//        if (CollectionUtil.isEmpty(configures)) {
+//            statu.crawlerStatus = 100;
+////            crawlerStatus = 100;
+//            return DateUtil.millisecondToTime(now);
+//        }
+//        int count = 0;
+//        statu.crawlerSize = configures.size();
+//        log.info("size =="+statu.crawlerSize);
+//
+//        for (ScholarConfigure configure : configures) {
+//            count++;
+//            statu.crawlerStatus = (long)(count/(double)statu.crawlerSize*100) - 1;
+//
+////            crawlerStatus = (int)(count/(double)crawlerSize*100) - 1;
+//            log.info("=============== Python INFO: Detecting web charset ······ ===============");
+//            String charset = CrawlerUtil.detectCharset(configure.getWebsite());
+//            log.info("=============== Python INFO: Detecting process finished! Get web charset: {}. ===============", charset);
+//            Spider.create(new ScholarSpider(configure, charset,name),name).setDownloader(new HttpsClientDownloader(name)).addUrl(configure.getWebsite()).thread(1).run();
+//
+//            Update update = new Update();
+//            update.set("handled", true);
+//            MongodbUtil.patch(configure.getId(), update, ScholarConfigure.class);
+//            if (count % 10 == 0) {
+//                log.info("=============== Total count: " + configures.size() + ". ===============");
+//                log.info("=============== Finished num: " + count + ". ===============");
+//            }
+//        }
+//
+//        log.info("=============== Total count: " + configures.size() + ". Finished: " + count + " ===============");
+//
+//        count = 0;
+//        Map<Integer,String> result = new HashMap<>();
+//        ObjectMapper mapper = new ObjectMapper();
+//        String resultString = "";
+//        for(String str : statu.saver){
+//            result.put(count++,str);
+////            log.info(str);
+//        }
+//        try {
+//            resultString = mapper.writeValueAsString(result);
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//        }
+//        statu.crawlerStatus = 100;
+////        crawlerStatus = 100;
+//        return resultString;
+//    }
 
 
 //    int imgCrawlerStatus = 0;
